@@ -2,7 +2,6 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
-from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.response import Response
 from .serializers import RegistrationSerializer, LoginSerializer
 
@@ -30,13 +29,13 @@ class RegistrationView(APIView):
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CustomLoginView(ObtainAuthToken):
+class CustomLoginView(APIView):
 
     permission_classes = [AllowAny]
 
     def post(self, request):
 
-        serializer = RegistrationSerializer(data=request.data)
+        serializer = LoginSerializer(data=request.data)
 
         if serializer.is_valid():
             user = serializer.validated_data['user']
