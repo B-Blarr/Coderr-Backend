@@ -139,3 +139,10 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ],
 }
+
+
+AUTH_USER_MODEL = "auth_app.User"
+
+
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
