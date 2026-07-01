@@ -42,3 +42,16 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid credentials')
         data['user'] = user
         return data
+    
+
+class ProfileDetailSerializer(serializers.ModelSerializer):
+
+    user = serializers.IntegerField(read_only=True, source='id')
+    
+    class Meta:
+        model = User
+        fields = [
+            'user', 'username', 'first_name', 'last_name', 'file', 'location',
+            'tel', 'description', 'working_hours', 'type', 'email', 'created_at'
+        ]
+        read_only_fields = ['username', 'type', 'created_at']
