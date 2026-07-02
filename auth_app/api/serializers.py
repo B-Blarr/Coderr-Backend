@@ -55,3 +55,29 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
             'tel', 'description', 'working_hours', 'type', 'email', 'created_at'
         ]
         read_only_fields = ['username', 'type', 'created_at']
+
+
+class BusinessProfileSerializer(serializers.ModelSerializer):
+
+    user = serializers.IntegerField(read_only=True, source='id')
+    
+    class Meta:
+        model = User
+        fields = [
+            'user', 'username', 'first_name', 'last_name', 'file', 'location',
+            'tel', 'description', 'working_hours', 'type'
+        ]
+        read_only_fields = ['username', 'type']
+
+
+class CustomerProfileSerializer(serializers.ModelSerializer):
+
+    user = serializers.IntegerField(read_only=True, source='id')
+    uploaded_at = serializers.DateTimeField(read_only=True, source='created_at')
+    
+    class Meta:
+        model = User
+        fields = [
+            'user', 'username', 'first_name', 'last_name', 'file', 'uploaded_at', 'type'
+        ]
+        read_only_fields = ['username', 'type']
