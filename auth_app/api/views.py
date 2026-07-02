@@ -1,9 +1,14 @@
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
-from .serializers import RegistrationSerializer, LoginSerializer
+from rest_framework.permissions import IsAuthenticated
+from .serializers import RegistrationSerializer, LoginSerializer,\
+    ProfileDetailSerializer
+from .permissions import IsOwnerOrReadOnly
+from auth_app.models import User
 
 
 class RegistrationView(APIView):
@@ -50,3 +55,12 @@ class CustomLoginView(APIView):
         else:
             return Response(
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class ProfileDetailView(generics.RetrieveUpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = ProfileDetailSerializer
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+
+
+
