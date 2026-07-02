@@ -6,7 +6,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .serializers import RegistrationSerializer, LoginSerializer,\
-    ProfileDetailSerializer
+    ProfileDetailSerializer, BusinessProfileSerializer,\
+    CustomerProfileSerializer
 from .permissions import IsOwnerOrReadOnly
 from auth_app.models import User
 
@@ -63,4 +64,11 @@ class ProfileDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
 
+class BusinessProfileView(generics.ListAPIView):
+    queryset = User.objects.filter(type='business')
+    serializer_class = BusinessProfileSerializer
 
+
+class CustomerProfileView(generics.ListAPIView):
+    queryset = User.objects.filter(type='customer')
+    serializer_class = CustomerProfileSerializer
