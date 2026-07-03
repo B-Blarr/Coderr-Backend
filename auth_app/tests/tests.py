@@ -26,6 +26,18 @@ class AuthTests(APITestCase):
         self.assertEqual(response.data['username'], 'newuser')
         self.assertTrue(User.objects.filter(username='newuser').exists())
 
+    def test_registration_password_mismatch_returns_400(self):
+        url = reverse('registration')
+        data = {
+            'username': 'newuser', 'email': 'new@test.de',
+            'password': 'pass1234', 'repeated_password': 'differentpassword',
+            'type': 'customer',
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('repeated_password', response.data)
+
+
     def test_login(self):
         url = reverse('login')
         data = {'username': 'loginuser', 'password': 'pass1234'}
@@ -36,6 +48,13 @@ class AuthTests(APITestCase):
             'token', 'username', 'email', 'user_id'
         }
         self.assertEqual(set(response.data.keys()), expected_fields)
+
+    def test_login_wrong_password_returns_400(self):
+        url = reverse('login')
+        data = {'username': 'loginuser', 'password': 'wrong_password'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('non_field_errors', response.data)
 
     def test_token(self):
         token = Token.objects.create(user=self.user)
