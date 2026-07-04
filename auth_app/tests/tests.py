@@ -1,6 +1,6 @@
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from rest_framework.test import APITestCase, APIClient
+from rest_framework.test import APITestCase
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 
@@ -21,8 +21,8 @@ class AuthTests(APITestCase):
             'type': 'customer',
         }
         response = self.client.post(url, data, format='json')
-        self.assertIn('token', response.data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn('token', response.data)
         self.assertEqual(response.data['username'], 'newuser')
         self.assertTrue(User.objects.filter(username='newuser').exists())
 
@@ -36,7 +36,6 @@ class AuthTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('repeated_password', response.data)
-
 
     def test_login(self):
         url = reverse('login')
@@ -119,12 +118,19 @@ class ProfileTests(APITestCase):
         self.client.force_authenticate(user=self.business)
         url = reverse('business-profile-list')
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)   
+        expected = {'user', 'username', 'first_name', 'last_name', 'file',
+                    'location', 'tel', 'description', 'working_hours', 'type'}
+        self.assertEqual(set(response.data[0].keys()), expected)
 
     def test_customer_list(self):
         self.client.force_authenticate(user=self.customer)
         url = reverse('customer-profile-list')
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)   
+        expected = {'user', 'username', 'first_name', 'last_name', 'file',
+                    'uploaded_at', 'type'}
+        self.assertEqual(set(response.data[0].keys()), expected)
+
