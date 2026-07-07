@@ -71,10 +71,24 @@ class OfferCreateSerializer(serializers.ModelSerializer):
         return offer
 
     def validate_details(self, value):
-        if len(value) != 3:
-            raise serializers.ValidationError('Exactly 3 Details are needed.')
-        types = [detail['offer_type'] for detail in value]
-        if set(types) != {'basic', 'standard', 'premium'}:
-            raise serializers.ValidationError(
-                'Exactly one basic, standard and premium detail are needed.')
+        if self.instance is None:
+            if len(value) != 3:
+                raise serializers.ValidationError('Exactly 3 Details are needed.')
+            types = [detail['offer_type'] for detail in value]
+            if set(types) != {'basic', 'standard', 'premium'}:
+                raise serializers.ValidationError(
+                    'Exactly one basic, standard and premium detail are needed.')
         return value
+
+    def update(self, instance, validated_data):
+        details_data = validated_data.pop('details', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if details_data is not None:
+            for detail in details_data:
+                detail_obj = instance.details.get(offer_type=detail['offer_type'])
+                for attr, value in detail.items():
+                    setattr(detail_obj, attr, value)
+                detail_obj.save()
+        return instance
