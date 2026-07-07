@@ -7,4 +7,8 @@ class IsOwnerOrReadOnly(BasePermission):
             return True
         return obj.user == request.user
     
-    
+class IsBusiness(BasePermission):
+
+    def has_permission(self, request, view):
+        return (request.user.is_authenticated
+                and request.user.type == 'business')
