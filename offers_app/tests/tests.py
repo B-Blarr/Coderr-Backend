@@ -63,7 +63,7 @@ class OfferTests(APITestCase):
         self.client.force_authenticate(user=self.business)
         url = reverse('offer-list')
         data = self._offer_data()
-        data['details'] = data['details'].pop()       
+        data['details'].pop()       
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('details', response.data)
@@ -106,4 +106,12 @@ class OfferTests(APITestCase):
         url = reverse('offer-detail', kwargs={'pk': self.offer.id})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_list_filter_creator_id(self):
+        url = reverse('offer-list')
+        response = self.client.get(url, {'creator_id': self.business.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        for offer in response.data['results']:
+            self.assertEqual(offer['user'], self.business.id)
+
 
