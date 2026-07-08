@@ -134,3 +134,6 @@ class ProfileTests(APITestCase):
                     'uploaded_at', 'type'}
         self.assertEqual(set(response.data[0].keys()), expected)
 
+    def test_model_str_representation(self):
+        self.assertEqual(str(self.business), 'testuserB')        
+
