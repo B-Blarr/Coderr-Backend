@@ -53,6 +53,21 @@ class OfferTests(APITestCase):
         self.assertEqual(new_offer.details.count(), 3)
         self.assertEqual(new_offer.user, self.business)
 
+    def test_create_offer_as_customer_returns_403(self):
+        self.client.force_authenticate(user=self.customer)         
+        url = reverse('offer-list')
+        response = self.client.post(url, self._offer_data(), format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_offer_invalid_details_returns_400(self):
+        self.client.force_authenticate(user=self.business)
+        url = reverse('offer-list')
+        data = self._offer_data()
+        data['details'] = data['details'].pop()       
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('details', response.data)
+
     def test_get_offer(self):
         url = reverse('offer-list')
         response = self.client.get(url)
@@ -73,3 +88,22 @@ class OfferTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.offer.refresh_from_db()
         self.assertEqual(self.offer.title, 'Changed')
+
+    def test_patch_offer_not_as_owner_returns_403(self):
+        self.client.force_authenticate(user=self.other_business)   
+        url = reverse('offer-detail', kwargs={'pk': self.offer.id})
+        response = self.client.patch(url, {'title': 'Changed'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_delete_offer(self):
+        self.client.force_authenticate(user=self.business)   
+        url = reverse('offer-detail', kwargs={'pk': self.offer.id})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_delete_offer_not_as_owner_returns_403(self):
+        self.client.force_authenticate(user=self.other_business)   
+        url = reverse('offer-detail', kwargs={'pk': self.offer.id})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
