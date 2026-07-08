@@ -1,3 +1,4 @@
+from django.db.models import Q, Min
 from rest_framework import viewsets
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -29,6 +30,41 @@ class OfferViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated()]
         return [AllowAny()]
     
+    def get_queryset(self):
+        queryset = Offer.objects.annotate(       
+            min_price=Min('details__price'),
+            min_delivery_time=Min('details__delivery_time_in_days'),
+        )
+
+        search = self.request.query_params.get('search')
+        if search is not None:
+            queryset = queryset.filter(
+                Q(title__icontains=search) | Q(description__icontains=search))
+
+        creator_id = self.request.query_params.get('creator_id')
+        if creator_id is not None:
+            queryset = queryset.filter(user_id=creator_id)
+
+        min_price = self.request.query_params.get('min_price')
+        if min_price is not None:
+            queryset = queryset.filter(min_price__gte=min_price)
+
+        max_delivery_time = self.request.query_params.get('max_delivery_time')
+        if max_delivery_time is not None:
+            queryset = queryset.filter(min_delivery_time__lte=max_delivery_time)
+
+        ordering = self.request.query_params.get('ordering')
+        allowed = ['updated_at', '-updated_at', 'min_price', '-min_price']
+        if ordering in allowed:
+            queryset = queryset.order_by(ordering)
+        else:
+            queryset = queryset.order_by('-updated_at') 
+
+        return queryset
+
+
+    
+
 class OfferDetailRetrieveView(generics.RetrieveAPIView):
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailSerializer
