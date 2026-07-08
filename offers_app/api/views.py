@@ -5,10 +5,12 @@ from offers_app.models import Offer, OfferDetail
 from .serializers import OfferCreateSerializer, OfferSerializer,\
     OfferDetailSerializer
 from .permissions import IsOwnerOrReadOnly, IsBusiness
+from .pagination import OfferPagination
 
 
 class OfferViewSet(viewsets.ModelViewSet):
     queryset = Offer.objects.all()
+    pagination_class = OfferPagination
     
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
