@@ -114,4 +114,10 @@ class OfferTests(APITestCase):
         for offer in response.data['results']:
             self.assertEqual(offer['user'], self.business.id)
 
+    def test_model_str_representation(self):
+        self.assertEqual(str(self.offer), 'Test Offer')        
+        basic = self.offer.details.get(offer_type='basic')
+        self.assertEqual(str(basic), 'Basic')                  
+
+
 
