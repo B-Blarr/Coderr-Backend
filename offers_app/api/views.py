@@ -31,37 +31,47 @@ class OfferViewSet(viewsets.ModelViewSet):
         return [AllowAny()]
     
     def get_queryset(self):
-        queryset = Offer.objects.annotate(       
+        queryset = Offer.objects.annotate(
             min_price=Min('details__price'),
             min_delivery_time=Min('details__delivery_time_in_days'),
         )
+        queryset = self._filter_search(queryset)
+        queryset = self._filter_creator(queryset)
+        queryset = self._filter_min_price(queryset)
+        queryset = self._filter_max_delivery(queryset)
+        return self._apply_ordering(queryset)
 
+    def _filter_search(self, queryset):
         search = self.request.query_params.get('search')
         if search is not None:
             queryset = queryset.filter(
                 Q(title__icontains=search) | Q(description__icontains=search))
+        return queryset
 
+    def _filter_creator(self, queryset):
         creator_id = self.request.query_params.get('creator_id')
         if creator_id is not None:
             queryset = queryset.filter(user_id=creator_id)
+        return queryset
 
+    def _filter_min_price(self, queryset):
         min_price = self.request.query_params.get('min_price')
         if min_price is not None:
             queryset = queryset.filter(min_price__gte=min_price)
+        return queryset
 
+    def _filter_max_delivery(self, queryset):
         max_delivery_time = self.request.query_params.get('max_delivery_time')
         if max_delivery_time is not None:
             queryset = queryset.filter(min_delivery_time__lte=max_delivery_time)
+        return queryset
 
+    def _apply_ordering(self, queryset):
         ordering = self.request.query_params.get('ordering')
         allowed = ['updated_at', '-updated_at', 'min_price', '-min_price']
         if ordering in allowed:
-            queryset = queryset.order_by(ordering)
-        else:
-            queryset = queryset.order_by('-updated_at') 
-
-        return queryset
-
+            return queryset.order_by(ordering)
+        return queryset.order_by('-updated_at')
 
     
 
