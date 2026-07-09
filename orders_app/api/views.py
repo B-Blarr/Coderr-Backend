@@ -1,8 +1,10 @@
 from django.db.models import Q
 from rest_framework import viewsets
 from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
 from .serializers import OrderSerializer
 from orders_app.models import Order
+from .permissions import IsCustomer
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -20,3 +22,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return Order.objects.filter(
             Q(customer_user=user) | Q(business_user=user))
+    
+    def get_permissions(self):
+        if self.action == 'create':
+            return [IsCustomer()]
+        return [IsAuthenticated()]
