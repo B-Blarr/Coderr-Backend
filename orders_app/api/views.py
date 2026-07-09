@@ -2,7 +2,7 @@ from django.db.models import Q
 from rest_framework import viewsets
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from .serializers import OrderSerializer
+from .serializers import OrderSerializer, OrderUpdateSerializer
 from orders_app.models import Order
 from .permissions import IsCustomer, IsBusinessOwnerOfOrder
 
@@ -11,8 +11,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
 
     def get_serializer_class(self):
-        # if self.action in ['create', 'update', 'partial_update']:
-        #     return OrderCreateSerializer
+        if self.action in ['update', 'partial_update']:
+            return OrderUpdateSerializer
         return OrderSerializer
 
     def perform_create(self, serializer):
