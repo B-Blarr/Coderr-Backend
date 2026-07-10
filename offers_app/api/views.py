@@ -74,7 +74,6 @@ class OfferViewSet(viewsets.ModelViewSet):
         return queryset.order_by('-updated_at')
 
     
-
 class OfferDetailRetrieveView(generics.RetrieveAPIView):
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailSerializer
