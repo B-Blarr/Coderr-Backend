@@ -20,3 +20,13 @@ class ReviewSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'You already gave a review to this business user.')
         return attrs
+
+
+class ReviewUpdateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Review
+        fields = ['id', 'business_user', 'reviewer', 'rating', 'description',
+                  'created_at', 'updated_at']
+        read_only_fields = ['business_user', 'reviewer',
+                  'created_at', 'updated_at']
