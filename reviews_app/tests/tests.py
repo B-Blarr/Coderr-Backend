@@ -52,3 +52,34 @@ class ReviewsTests(APITestCase):
                 'description': 'Great work!'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_create_duplicate_review_returns_400(self):
+        self.client.force_authenticate(user=self.customer)
+        url = reverse('review-list')
+        data = {'business_user': self.business.id, 'rating': 3,
+                'description': 'Again.'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patch_review_as_owner(self):
+        self.client.force_authenticate(user=self.customer)
+        url = reverse('review-detail', kwargs={'pk': self.review.id})
+        response = self.client.patch(url, {'rating': '4'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.rating, 4)
+
+    def test_filter_reviews(self):
+        Review.objects.create(
+            business_user=self.other_business, reviewer=self.other_customer,
+            rating=5, description='Other.')
+
+        self.client.force_authenticate(user=self.customer)
+        url = reverse('review-list')
+        response = self.client.get(url, {
+            'business_user_id': self.business.id,
+            'reviewer_id': self.customer.id,
+            'ordering': 'rating',
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
