@@ -23,3 +23,32 @@ class ReviewsTests(APITestCase):
             business_user=self.business, reviewer=self.customer,
             rating=4, description='Nice Work.')
         
+    def test_get_reviews_list(self):
+        self.client.force_authenticate(user=self.business)
+        url = reverse('review-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_reviews_list_not_authenticated_returns_401(self):
+        url = reverse('review-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_review_as_customer(self):
+        self.client.force_authenticate(user=self.other_customer)
+        url = reverse('review-list')
+        data = {'business_user': self.business.id, 'rating': 5,
+                'description': 'Great work!'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['reviewer'], self.other_customer.id)
+        self.assertEqual(response.data['business_user'], self.business.id)
+        self.assertEqual(response.data['rating'], 5)
+
+    def test_create_review_as_business_returns_403(self):
+        self.client.force_authenticate(user=self.business)
+        url = reverse('review-list')
+        data = {'business_user': self.business.id, 'rating': 5,
+                'description': 'Great work!'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
