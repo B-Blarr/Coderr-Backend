@@ -52,7 +52,8 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'user', 'username', 'first_name', 'last_name', 'file', 'location',
-            'tel', 'description', 'working_hours', 'type', 'email', 'created_at'
+            'tel', 'description', 'working_hours', 'type', 'email',
+            'created_at'
         ]
         read_only_fields = ['username', 'type', 'created_at']
 
@@ -79,6 +80,7 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'user', 'username', 'first_name', 'last_name', 'file', 'uploaded_at', 'type'
+            'user', 'username', 'first_name', 'last_name', 'file',
+            'uploaded_at', 'type'
         ]
         read_only_fields = ['username', 'type']

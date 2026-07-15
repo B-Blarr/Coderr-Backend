@@ -78,7 +78,8 @@ class OfferCreateSerializer(serializers.ModelSerializer):
             types = [detail['offer_type'] for detail in value]
             if set(types) != {'basic', 'standard', 'premium'}:
                 raise serializers.ValidationError(
-                    'Exactly one basic, standard and premium detail are needed.')
+                    'Exactly one basic, standard and premium '
+                    'detail are needed.')
         return value
 
     def update(self, instance, validated_data):

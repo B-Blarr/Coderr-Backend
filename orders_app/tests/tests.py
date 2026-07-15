@@ -19,18 +19,21 @@ class OrderTests(APITestCase):
         self.customer = User.objects.create_user(
             username='customer', password='pass1234', type='customer')
         self.admin = User.objects.create_user(
-            username='admin', password='pass1234', type='customer', is_staff=True)
+            username='admin', password='pass1234', type='customer',
+            is_staff=True)
 
         self.offer = Offer.objects.create(
             user=self.business, title='Test Offer', description='description')
         self.detail = OfferDetail.objects.create(
-            offer=self.offer, title='Basic', revisions=1, delivery_time_in_days=5,
-            price='100.00', features=['feature'], offer_type='basic')
+            offer=self.offer, title='Basic', revisions=1,
+            delivery_time_in_days=5, price='100.00', features=['feature'],
+            offer_type='basic')
 
         self.order = Order.objects.create(
             customer_user=self.customer, business_user=self.business,
-            title='Basic', revisions=1, delivery_time_in_days=5, price='100.00',
-            features=['feature'], offer_type='basic', status='in_progress')
+            title='Basic', revisions=1, delivery_time_in_days=5,
+            price='100.00', features=['feature'], offer_type='basic',
+            status='in_progress')
 
     def test_get_order_list(self):
         self.client.force_authenticate(user=self.business)

@@ -16,6 +16,7 @@ class BaseInfoView(APIView):
         return Response({
             'review_count': Review.objects.count(),
             'average_rating': round(average, 1) if average is not None else 0,
-            'business_profile_count': User.objects.filter(type='business').count(),
+            'business_profile_count': User.objects.filter(
+                type='business').count(),
             'offer_count': Offer.objects.count(),
         })

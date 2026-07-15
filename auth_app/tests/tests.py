@@ -79,7 +79,8 @@ class ProfileTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         expected_fields = {
             'user', 'username', 'first_name', 'last_name', 'file', 'location',
-            'tel', 'description', 'working_hours', 'type', 'email', 'created_at',
+            'tel', 'description', 'working_hours', 'type', 'email',
+            'created_at',
         }
         self.assertEqual(set(response.data.keys()), expected_fields)
         self.assertEqual(response.data['user'], self.business.id)
