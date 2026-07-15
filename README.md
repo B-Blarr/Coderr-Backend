@@ -67,8 +67,8 @@ coderr_backend/
 1. **Clone the repository**
 
    ```bash
-   git clone <repository-url>
-   cd coderr_backend
+   git clone https://github.com/B-Blarr/Coderr-Backend.git
+   cd Coderr-Backend
    ```
 
 2. **Create and activate a virtual environment**
