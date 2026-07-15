@@ -67,6 +67,7 @@ class AuthTests(APITestCase):
 
 
 class ProfileTests(APITestCase):
+    """Test profile detail/update and the business/customer lists."""
 
     def setUp(self):
         self.business = User.objects.create_user(

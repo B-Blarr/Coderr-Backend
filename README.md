@@ -139,6 +139,23 @@ coderr_backend/
 
 ---
 
+## Tests
+
+Run the full test suite:
+
+```bash
+python manage.py test
+```
+
+Measure test coverage (target: **≥ 95 %**):
+
+```bash
+coverage run --source=auth_app,offers_app,orders_app,reviews_app,base_app --omit='*/migrations/*,*/tests/*' manage.py test
+coverage report
+```
+
+---
+
 ## Authentication
 
 The API uses **token authentication**. Register or log in to receive a token,
