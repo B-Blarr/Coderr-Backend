@@ -3,6 +3,7 @@
 from django.db.models import Min, Q
 from rest_framework import generics, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import ValidationError
 
 from offers_app.models import Offer, OfferDetail
 
@@ -60,24 +61,26 @@ class OfferViewSet(viewsets.ModelViewSet):
 
     def _filter_creator(self, queryset):
         """Filter offers by their creator's user id."""
-        creator_id = self.request.query_params.get('creator_id')
-        if creator_id is not None:
-            queryset = queryset.filter(user_id=creator_id)
+        raw = self.request.query_params.get('creator_id')
+        if raw is not None:
+            value = self._as_number(raw, 'creator_id', int)
+            queryset = queryset.filter(user_id=value)
         return queryset
 
     def _filter_min_price(self, queryset):
         """Filter offers by a minimum price."""
-        min_price = self.request.query_params.get('min_price')
-        if min_price is not None:
-            queryset = queryset.filter(min_price__gte=min_price)
+        raw = self.request.query_params.get('min_price')
+        if raw is not None:
+            value = self._as_number(raw, 'min_price', float)
+            queryset = queryset.filter(min_price__gte=value)
         return queryset
 
     def _filter_max_delivery(self, queryset):
         """Filter offers by a maximum delivery time."""
-        max_delivery_time = self.request.query_params.get('max_delivery_time')
-        if max_delivery_time is not None:
-            queryset = queryset.filter(
-                min_delivery_time__lte=max_delivery_time)
+        raw = self.request.query_params.get('max_delivery_time')
+        if raw is not None:
+            value = self._as_number(raw, 'max_delivery_time', int)
+            queryset = queryset.filter(min_delivery_time__lte=value)
         return queryset
 
     def _apply_ordering(self, queryset):
@@ -87,6 +90,13 @@ class OfferViewSet(viewsets.ModelViewSet):
         if ordering in allowed:
             return queryset.order_by(ordering)
         return queryset.order_by('-updated_at')
+
+    def _as_number(self, raw, field, cast):
+        """Cast a query param to a number or raise a 400."""
+        try:
+            return cast(raw)
+        except (TypeError, ValueError):
+            raise ValidationError({field: 'Must be a number.'})
 
 
 class OfferDetailRetrieveView(generics.RetrieveAPIView):
