@@ -124,3 +124,27 @@ class OfferTests(APITestCase):
         self.assertEqual(str(self.offer), 'Test Offer')
         basic = self.offer.details.get(offer_type='basic')
         self.assertEqual(str(basic), 'Basic')
+
+    def test_list_filter_invalid_max_delivery_returns_400(self):
+        url = reverse('offer-list')
+        response = self.client.get(url, {'max_delivery_time': 'test'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_patch_offer_detail_without_offer_type_returns_400(self):
+        self.client.force_authenticate(user=self.business)
+        url = reverse('offer-detail', kwargs={'pk': self.offer.id})
+        data = {'details': [{'title': 'X', 'revisions': 1,
+                             'delivery_time_in_days': 5, 'price': 100,
+                             'features': ['a']}]}
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_get_offer_detail_unauthenticated_returns_401(self):
+        url = reverse('offer-detail', kwargs={'pk': self.offer.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_offer_unauthenticated_returns_401(self):
+        url = reverse('offer-detail', kwargs={'pk': self.offer.id})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

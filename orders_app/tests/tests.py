@@ -114,3 +114,9 @@ class OrderTests(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Order.objects.filter(id=self.order.id).exists())
+
+    def test_patch_order_unauthenticated_returns_401(self):
+        url = reverse('order-detail', kwargs={'pk': self.order.id})
+        response = self.client.patch(
+            url, {'status': 'completed'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
