@@ -1,9 +1,12 @@
+"""Database models for the reviews app."""
+
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from auth_app.models import User
 
 
 class Review(models.Model):
+    """A customer's rating and text review of a business user."""
 
     business_user = models.ForeignKey(
         User, related_name='reviews_as_business', on_delete=models.CASCADE)
@@ -20,4 +23,5 @@ class Review(models.Model):
         ordering = ['-updated_at']
 
     def __str__(self):
+        """Return the review description as its label."""
         return self.description
