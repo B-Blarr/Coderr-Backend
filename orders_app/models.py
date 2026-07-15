@@ -1,8 +1,11 @@
+"""Database models for the orders app."""
+
 from django.db import models
 from auth_app.models import User
 
 
 class Order(models.Model):
+    """A snapshot order created from a chosen offer detail."""
 
     TYPE_CHOICES = [
         ('basic', 'Basic'),
@@ -35,4 +38,5 @@ class Order(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
+        """Return the order title as its label."""
         return self.title

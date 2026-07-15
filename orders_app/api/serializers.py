@@ -1,3 +1,5 @@
+"""Serializers for the orders app API."""
+
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from orders_app.models import Order
@@ -5,6 +7,7 @@ from offers_app.models import OfferDetail
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    """Read/create serializer; builds an order from an offer detail."""
 
     offer_detail_id = serializers.IntegerField(write_only=True)
 
@@ -19,6 +22,7 @@ class OrderSerializer(serializers.ModelSerializer):
                             'features', 'offer_type', 'status']
 
     def create(self, validated_data):
+        """Create an order by snapshotting the chosen offer detail."""
         offer_detail_id = validated_data.pop('offer_detail_id')
         detail = get_object_or_404(OfferDetail, id=offer_detail_id)
         return Order.objects.create(
@@ -34,6 +38,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class OrderUpdateSerializer(serializers.ModelSerializer):
+    """Update serializer; only the status field is editable."""
 
     class Meta:
         model = Order

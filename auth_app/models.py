@@ -1,8 +1,11 @@
+"""Database models for the auth app."""
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 
 class User(AbstractUser):
+    """Custom user with profile fields and a customer/business type."""
 
     TYPE_CHOICES = [
         ("customer", "Customer"),
@@ -18,4 +21,5 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
+        """Return the username as the user's label."""
         return self.username

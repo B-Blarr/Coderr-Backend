@@ -1,3 +1,5 @@
+"""API view for the aggregated platform statistics (base-info)."""
+
 from django.db.models import Avg
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -8,10 +10,12 @@ from auth_app.models import User
 
 
 class BaseInfoView(APIView):
+    """Return platform-wide counts and the average rating."""
 
     permission_classes = [AllowAny]
 
     def get(self, request):
+        """Return review/offer/profile counts and the average rating."""
         average = Review.objects.aggregate(Avg('rating'))['rating__avg']
         return Response({
             'review_count': Review.objects.count(),

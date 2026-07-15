@@ -1,3 +1,5 @@
+"""Tests for the reviews app endpoints."""
+
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
@@ -8,6 +10,7 @@ User = get_user_model()
 
 
 class ReviewsTests(APITestCase):
+    """Test review CRUD, filtering and permissions."""
 
     def setUp(self):
         self.business = User.objects.create_user(

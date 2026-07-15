@@ -1,8 +1,12 @@
+"""Database models for the offers app."""
+
 from django.db import models
 from auth_app.models import User
 
 
 class Offer(models.Model):
+    """A service offer created by a business user."""
+
     user = models.ForeignKey(
         User, related_name='user_offers', on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
@@ -15,10 +19,12 @@ class Offer(models.Model):
         ordering = ['-updated_at']
 
     def __str__(self):
+        """Return the offer title as its label."""
         return self.title
 
 
 class OfferDetail(models.Model):
+    """A single pricing tier (basic/standard/premium) of an offer."""
 
     TYPE_CHOICES = [
         ('basic', 'Basic'),
@@ -40,4 +46,5 @@ class OfferDetail(models.Model):
         ordering = ['price']
 
     def __str__(self):
+        """Return the detail title as its label."""
         return self.title

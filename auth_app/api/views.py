@@ -1,3 +1,5 @@
+"""API views for the auth app: registration, login and profiles."""
+
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework import generics
@@ -13,11 +15,12 @@ from auth_app.models import User
 
 
 class RegistrationView(APIView):
+    """Register a new user and return an auth token."""
 
     permission_classes = [AllowAny]
 
     def post(self, request):
-
+        """Create the user and return token and account data."""
         serializer = RegistrationSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -36,11 +39,12 @@ class RegistrationView(APIView):
 
 
 class CustomLoginView(APIView):
+    """Authenticate a user and return an auth token."""
 
     permission_classes = [AllowAny]
 
     def post(self, request):
-
+        """Validate credentials and return token and account data."""
         serializer = LoginSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -59,16 +63,22 @@ class CustomLoginView(APIView):
 
 
 class ProfileDetailView(generics.RetrieveUpdateAPIView):
+    """Retrieve or update a single user profile (owner may edit)."""
+
     queryset = User.objects.all()
     serializer_class = ProfileDetailSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
 
 class BusinessProfileView(generics.ListAPIView):
+    """List all business-type user profiles."""
+
     queryset = User.objects.filter(type='business')
     serializer_class = BusinessProfileSerializer
 
 
 class CustomerProfileView(generics.ListAPIView):
+    """List all customer-type user profiles."""
+
     queryset = User.objects.filter(type='customer')
     serializer_class = CustomerProfileSerializer

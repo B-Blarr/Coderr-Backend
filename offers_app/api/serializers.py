@@ -1,9 +1,12 @@
+"""Serializers for the offers app API."""
+
 from rest_framework import serializers
 from offers_app.models import Offer, OfferDetail
 from auth_app.models import User
 
 
 class UserDetailsSerializer(serializers.ModelSerializer):
+    """Minimal creator info embedded in offer responses."""
 
     class Meta:
         model = User
@@ -11,6 +14,7 @@ class UserDetailsSerializer(serializers.ModelSerializer):
 
 
 class OfferDetailLinkSerializer(serializers.ModelSerializer):
+    """Expose an offer detail as an id plus its URL."""
 
     url = serializers.SerializerMethodField()
 
@@ -19,10 +23,13 @@ class OfferDetailLinkSerializer(serializers.ModelSerializer):
         fields = ['id', 'url']
 
     def get_url(self, obj):
+        """Return the relative URL of the offer detail."""
         return f'/offerdetails/{obj.id}/'
 
 
 class OfferDetailSerializer(serializers.ModelSerializer):
+    """Full representation of a single offer detail (tier)."""
+
     class Meta:
         model = OfferDetail
         fields = ['id', 'title', 'revisions', 'delivery_time_in_days',
@@ -30,6 +37,7 @@ class OfferDetailSerializer(serializers.ModelSerializer):
 
 
 class OfferSerializer(serializers.ModelSerializer):
+    """Read serializer for offers with computed price/delivery fields."""
 
     details = OfferDetailLinkSerializer(many=True, read_only=True)
     min_price = serializers.SerializerMethodField()
@@ -45,15 +53,18 @@ class OfferSerializer(serializers.ModelSerializer):
         read_only_fields = ['user']
 
     def get_min_price(self, obj):
+        """Return the lowest price among the offer's details."""
         prices = [detail.price for detail in obj.details.all()]
         return min(prices)
 
     def get_min_delivery_time(self, obj):
+        """Return the shortest delivery time among the details."""
         times = [detail.delivery_time_in_days for detail in obj.details.all()]
         return min(times)
 
 
 class OfferCreateSerializer(serializers.ModelSerializer):
+    """Create/update serializer that manages the three tiers."""
 
     details = OfferDetailSerializer(many=True)
 
@@ -64,6 +75,7 @@ class OfferCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ['user']
 
     def create(self, validated_data):
+        """Create the offer and its nested detail tiers."""
         details_data = validated_data.pop('details')
         offer = Offer.objects.create(**validated_data)
         for detail in details_data:
@@ -71,6 +83,7 @@ class OfferCreateSerializer(serializers.ModelSerializer):
         return offer
 
     def validate_details(self, value):
+        """Require exactly three details, one per type, on create."""
         if self.instance is None:
             if len(value) != 3:
                 raise serializers.ValidationError(
@@ -83,6 +96,7 @@ class OfferCreateSerializer(serializers.ModelSerializer):
         return value
 
     def update(self, instance, validated_data):
+        """Update the offer and its details, matched by offer type."""
         details_data = validated_data.pop('details', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

@@ -1,3 +1,5 @@
+"""Tests for the auth app endpoints."""
+
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
@@ -9,6 +11,7 @@ User = get_user_model()
 
 
 class AuthTests(APITestCase):
+    """Test registration, login, profile and profile lists."""
 
     def setUp(self):
         self.user = User.objects.create_user(
