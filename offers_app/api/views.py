@@ -33,7 +33,7 @@ class OfferViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [IsBusiness()]
         if self.action in ['update', 'partial_update', 'destroy']:
-            return [IsOwnerOrReadOnly()]
+            return [IsAuthenticated(), IsOwnerOrReadOnly()]
         if self.action == 'retrieve':
             return [IsAuthenticated()]
         return [AllowAny()]

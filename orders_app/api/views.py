@@ -42,7 +42,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [IsCustomer()]
         if self.action in ['update', 'partial_update']:
-            return [IsBusinessOwnerOfOrder()]
+            return [IsAuthenticated(), IsBusinessOwnerOfOrder()]
         if self.action in ['destroy']:
             return [IsAdminUser()]
         return [IsAuthenticated()]
