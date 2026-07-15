@@ -100,7 +100,7 @@ class OfferCreateSerializer(serializers.ModelSerializer):
                 'Exactly one basic, standard and premium '
                 'detail are needed.')
         return value
-    
+
     def _validate_update_details(self, value):
         """On update, each detail must match an existing offer_type."""
         existing = set(
