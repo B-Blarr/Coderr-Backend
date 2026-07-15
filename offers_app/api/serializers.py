@@ -1,8 +1,9 @@
 """Serializers for the offers app API."""
 
 from rest_framework import serializers
-from offers_app.models import Offer, OfferDetail
+
 from auth_app.models import User
+from offers_app.models import Offer, OfferDetail
 
 
 class UserDetailsSerializer(serializers.ModelSerializer):

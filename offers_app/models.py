@@ -1,6 +1,7 @@
 """Database models for the offers app."""
 
 from django.db import models
+
 from auth_app.models import User
 
 

@@ -2,14 +2,16 @@
 
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
 from rest_framework import viewsets
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from .serializers import OrderSerializer, OrderUpdateSerializer
-from orders_app.models import Order
+from rest_framework.views import APIView
+
 from auth_app.models import User
-from .permissions import IsCustomer, IsBusinessOwnerOfOrder
+from orders_app.models import Order
+
+from .permissions import IsBusinessOwnerOfOrder, IsCustomer
+from .serializers import OrderSerializer, OrderUpdateSerializer
 
 
 class OrderViewSet(viewsets.ModelViewSet):

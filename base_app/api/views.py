@@ -1,12 +1,13 @@
 """API view for the aggregated platform statistics (base-info)."""
 
 from django.db.models import Avg
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from reviews_app.models import Review
-from offers_app.models import Offer
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from auth_app.models import User
+from offers_app.models import Offer
+from reviews_app.models import Review
 
 
 class BaseInfoView(APIView):

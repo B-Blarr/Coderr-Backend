@@ -1,6 +1,6 @@
 """Custom permission classes for the offers app."""
 
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsOwnerOrReadOnly(BasePermission):

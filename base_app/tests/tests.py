@@ -1,12 +1,12 @@
 """Tests for the base-info endpoint."""
 
-from django.urls import reverse
 from django.contrib.auth import get_user_model
-from rest_framework.test import APITestCase
+from django.urls import reverse
 from rest_framework import status
-from reviews_app.models import Review
-from offers_app.models import Offer
+from rest_framework.test import APITestCase
 
+from offers_app.models import Offer
+from reviews_app.models import Review
 
 User = get_user_model()
 

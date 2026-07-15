@@ -1,14 +1,15 @@
 """API views for the offers app."""
 
-from django.db.models import Q, Min
-from rest_framework import viewsets
-from rest_framework import generics
+from django.db.models import Min, Q
+from rest_framework import generics, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
+
 from offers_app.models import Offer, OfferDetail
-from .serializers import OfferCreateSerializer, OfferSerializer, \
-    OfferDetailSerializer
-from .permissions import IsOwnerOrReadOnly, IsBusiness
+
 from .pagination import OfferPagination
+from .permissions import IsBusiness, IsOwnerOrReadOnly
+from .serializers import (OfferCreateSerializer, OfferDetailSerializer,
+                          OfferSerializer)
 
 
 class OfferViewSet(viewsets.ModelViewSet):

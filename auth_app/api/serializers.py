@@ -1,7 +1,8 @@
 """Serializers for the auth app API."""
 
-from rest_framework import serializers
 from django.contrib.auth import authenticate
+from rest_framework import serializers
+
 from auth_app.models import User
 
 

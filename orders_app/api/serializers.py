@@ -2,8 +2,9 @@
 
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from orders_app.models import Order
+
 from offers_app.models import OfferDetail
+from orders_app.models import Order
 
 
 class OrderSerializer(serializers.ModelSerializer):
