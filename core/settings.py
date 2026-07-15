@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'orders_app',
     'reviews_app',
     'base_app',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -142,6 +143,15 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Coderr API',
+    'DESCRIPTION': 'Backend API for the Coderr freelancer platform.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 

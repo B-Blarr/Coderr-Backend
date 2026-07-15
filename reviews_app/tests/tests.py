@@ -11,13 +11,13 @@ class ReviewsTests(APITestCase):
 
     def setUp(self):
         self.business = User.objects.create_user(
-            username='busi', password='pass1234', type='business')
+            username='business', password='pass1234', type='business')
         self.other_business = User.objects.create_user(
-            username='busi2', password='pass1234', type='business')
+            username='other_business', password='pass1234', type='business')
         self.customer = User.objects.create_user(
-            username='custo', password='pass1234', type='customer')
+            username='customer', password='pass1234', type='customer')
         self.other_customer = User.objects.create_user(
-            username='custo2', password='pass1234', type='customer')
+            username='other_customer', password='pass1234', type='customer')
 
         self.review = Review.objects.create(
             business_user=self.business, reviewer=self.customer,
