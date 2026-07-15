@@ -3,7 +3,7 @@
 A RESTful backend for **Coderr**, a freelancer service marketplace.
 It provides token-authenticated endpoints for business users to publish
 service offers, for customers to order and review them, and for platform-wide
-statistics — built with Django and the Django REST Framework.
+statistics, built with Django and the Django REST Framework.
 
 ---
 
