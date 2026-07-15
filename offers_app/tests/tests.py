@@ -21,7 +21,8 @@ class OfferTests(APITestCase):
 
         self.offer = Offer.objects.create(
             user=self.business, title='Test Offer', description='description')
-        details = [('basic', 100, 5), ('standard', 200, 4), ('premium', 300, 3)]
+        details = [('basic', 100, 5), ('standard', 200, 4),
+                   ('premium', 300, 3)]
         for offer_type, price, days in details:
             OfferDetail.objects.create(
                 offer=self.offer, title=offer_type.capitalize(), revisions=1,
@@ -54,7 +55,7 @@ class OfferTests(APITestCase):
         self.assertEqual(new_offer.user, self.business)
 
     def test_create_offer_as_customer_returns_403(self):
-        self.client.force_authenticate(user=self.customer)         
+        self.client.force_authenticate(user=self.customer)
         url = reverse('offer-list')
         response = self.client.post(url, self._offer_data(), format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -63,7 +64,7 @@ class OfferTests(APITestCase):
         self.client.force_authenticate(user=self.business)
         url = reverse('offer-list')
         data = self._offer_data()
-        data['details'].pop()       
+        data['details'].pop()
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('details', response.data)
@@ -74,11 +75,11 @@ class OfferTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_offer_detail(self):
-        self.client.force_authenticate(user=self.business)          
-        url = reverse('offer-detail', kwargs={'pk': self.offer.id}) 
+        self.client.force_authenticate(user=self.business)
+        url = reverse('offer-detail', kwargs={'pk': self.offer.id})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['id'], self.offer.id)        
+        self.assertEqual(response.data['id'], self.offer.id)
         self.assertEqual(response.data['title'], 'Test Offer')
 
     def test_patch_offer(self):
@@ -90,19 +91,19 @@ class OfferTests(APITestCase):
         self.assertEqual(self.offer.title, 'Changed')
 
     def test_patch_offer_not_as_owner_returns_403(self):
-        self.client.force_authenticate(user=self.other_business)   
+        self.client.force_authenticate(user=self.other_business)
         url = reverse('offer-detail', kwargs={'pk': self.offer.id})
         response = self.client.patch(url, {'title': 'Changed'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_delete_offer(self):
-        self.client.force_authenticate(user=self.business)   
+        self.client.force_authenticate(user=self.business)
         url = reverse('offer-detail', kwargs={'pk': self.offer.id})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_delete_offer_not_as_owner_returns_403(self):
-        self.client.force_authenticate(user=self.other_business)   
+        self.client.force_authenticate(user=self.other_business)
         url = reverse('offer-detail', kwargs={'pk': self.offer.id})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -115,9 +116,6 @@ class OfferTests(APITestCase):
             self.assertEqual(offer['user'], self.business.id)
 
     def test_model_str_representation(self):
-        self.assertEqual(str(self.offer), 'Test Offer')        
+        self.assertEqual(str(self.offer), 'Test Offer')
         basic = self.offer.details.get(offer_type='basic')
-        self.assertEqual(str(basic), 'Basic')                  
-
-
-
+        self.assertEqual(str(basic), 'Basic')

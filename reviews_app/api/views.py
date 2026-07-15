@@ -12,7 +12,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         if self.action in ['update', 'partial_update']:
             return ReviewUpdateSerializer
         return ReviewSerializer
-    
+
     def perform_create(self, serializer):
         serializer.save(reviewer=self.request.user)
 

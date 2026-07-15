@@ -1,6 +1,7 @@
 from django.db import models
 from auth_app.models import User
 
+
 class Order(models.Model):
 
     TYPE_CHOICES = [

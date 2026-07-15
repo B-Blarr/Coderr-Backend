@@ -6,7 +6,6 @@ router = DefaultRouter()
 router.register(r'offers', OfferViewSet, basename='offer')
 
 urlpatterns = router.urls + [
-    path('offerdetails/<int:pk>/', OfferDetailRetrieveView.as_view(), name='offerdetail-detail'),
+    path('offerdetails/<int:pk>/', OfferDetailRetrieveView.as_view(),
+         name='offerdetail-detail'),
 ]
-
-

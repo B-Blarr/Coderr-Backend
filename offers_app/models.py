@@ -1,8 +1,10 @@
 from django.db import models
 from auth_app.models import User
 
+
 class Offer(models.Model):
-    user = models.ForeignKey(User, related_name='user_offers', on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, related_name='user_offers', on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     image = models.FileField(upload_to='offers/', null=True, blank=True)
     description = models.TextField()
@@ -14,7 +16,7 @@ class Offer(models.Model):
 
     def __str__(self):
         return self.title
-    
+
 
 class OfferDetail(models.Model):
 

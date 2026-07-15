@@ -22,7 +22,7 @@ class ReviewsTests(APITestCase):
         self.review = Review.objects.create(
             business_user=self.business, reviewer=self.customer,
             rating=4, description='Nice Work.')
-        
+
     def test_get_reviews_list(self):
         self.client.force_authenticate(user=self.business)
         url = reverse('review-list')

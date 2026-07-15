@@ -3,7 +3,7 @@ from rest_framework import viewsets
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from offers_app.models import Offer, OfferDetail
-from .serializers import OfferCreateSerializer, OfferSerializer,\
+from .serializers import OfferCreateSerializer, OfferSerializer, \
     OfferDetailSerializer
 from .permissions import IsOwnerOrReadOnly, IsBusiness
 from .pagination import OfferPagination
@@ -12,12 +12,12 @@ from .pagination import OfferPagination
 class OfferViewSet(viewsets.ModelViewSet):
     queryset = Offer.objects.all()
     pagination_class = OfferPagination
-    
+
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return OfferCreateSerializer
         return OfferSerializer
-    
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
@@ -29,7 +29,7 @@ class OfferViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return [IsAuthenticated()]
         return [AllowAny()]
-    
+
     def get_queryset(self):
         queryset = Offer.objects.annotate(
             min_price=Min('details__price'),
@@ -63,7 +63,8 @@ class OfferViewSet(viewsets.ModelViewSet):
     def _filter_max_delivery(self, queryset):
         max_delivery_time = self.request.query_params.get('max_delivery_time')
         if max_delivery_time is not None:
-            queryset = queryset.filter(min_delivery_time__lte=max_delivery_time)
+            queryset = queryset.filter(
+                min_delivery_time__lte=max_delivery_time)
         return queryset
 
     def _apply_ordering(self, queryset):
@@ -73,7 +74,7 @@ class OfferViewSet(viewsets.ModelViewSet):
             return queryset.order_by(ordering)
         return queryset.order_by('-updated_at')
 
-    
+
 class OfferDetailRetrieveView(generics.RetrieveAPIView):
     queryset = OfferDetail.objects.all()
     serializer_class = OfferDetailSerializer

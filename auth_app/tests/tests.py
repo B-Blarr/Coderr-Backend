@@ -7,12 +7,13 @@ from rest_framework.authtoken.models import Token
 
 User = get_user_model()
 
+
 class AuthTests(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-        username='loginuser', password='pass1234', type='customer')
-    
+            username='loginuser', password='pass1234', type='customer')
+
     def test_registration(self):
         url = reverse('registration')
         data = {
@@ -70,7 +71,7 @@ class ProfileTests(APITestCase):
             username='testuserB', password='testpassword', type='business')
         self.customer = User.objects.create_user(
             username='testuserC', password='testpassword', type='customer')
-        
+
     def test_get_profile_detail(self):
         self.client.force_authenticate(user=self.business)
         url = reverse('profile-detail', kwargs={'pk': self.business.id})
@@ -111,7 +112,8 @@ class ProfileTests(APITestCase):
     def test_patch_foreign_profile_returns_403(self):
         self.client.force_authenticate(user=self.customer)
         url = reverse('profile-detail', kwargs={'pk': self.business.id})
-        response = self.client.patch(url, {'first_name': 'Hack'}, format='json')
+        response = self.client.patch(
+            url, {'first_name': 'Hack'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_business_list(self):
@@ -119,7 +121,7 @@ class ProfileTests(APITestCase):
         url = reverse('business-profile-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)   
+        self.assertEqual(len(response.data), 1)
         expected = {'user', 'username', 'first_name', 'last_name', 'file',
                     'location', 'tel', 'description', 'working_hours', 'type'}
         self.assertEqual(set(response.data[0].keys()), expected)
@@ -129,11 +131,10 @@ class ProfileTests(APITestCase):
         url = reverse('customer-profile-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)   
+        self.assertEqual(len(response.data), 1)
         expected = {'user', 'username', 'first_name', 'last_name', 'file',
                     'uploaded_at', 'type'}
         self.assertEqual(set(response.data[0].keys()), expected)
 
     def test_model_str_representation(self):
-        self.assertEqual(str(self.business), 'testuserB')        
-
+        self.assertEqual(str(self.business), 'testuserB')

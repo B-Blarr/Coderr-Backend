@@ -27,7 +27,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Order.objects.all()
         return Order.objects.filter(
             Q(customer_user=user) | Q(business_user=user))
-    
+
     def get_permissions(self):
         if self.action == 'create':
             return [IsCustomer()]
@@ -36,19 +36,20 @@ class OrderViewSet(viewsets.ModelViewSet):
         if self.action in ['destroy']:
             return [IsAdminUser()]
         return [IsAuthenticated()]
-    
+
 
 class OrderCountView(APIView):
 
     def get(self, request, business_user_id):
-        get_object_or_404(User, id=business_user_id, type='business') 
+        get_object_or_404(User, id=business_user_id, type='business')
         count = Order.objects.filter(
             business_user_id=business_user_id, status='in_progress').count()
         return Response({'order_count': count})
-    
+
+
 class CompletedOrderCountView(APIView):
     def get(self, request, business_user_id):
-        get_object_or_404(User, id=business_user_id, type='business') 
+        get_object_or_404(User, id=business_user_id, type='business')
         count = Order.objects.filter(
             business_user_id=business_user_id, status='completed').count()
         return Response({'completed_order_count': count})

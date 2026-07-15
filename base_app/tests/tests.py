@@ -27,20 +27,18 @@ class BaseInfoTests(APITestCase):
             rating=2, description='Very Good.')
         self.offer = Offer.objects.create(
             user=self.business, title='Test Offer', description='description')
-   
 
     def test_base_info(self):
         url = reverse('base-info')
-        response = self.client.get(url)          
+        response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['review_count'], 2)
         self.assertEqual(response.data['average_rating'], 3.0)
         self.assertEqual(response.data['business_profile_count'], 1)
         self.assertEqual(response.data['offer_count'], 1)
 
-
     def test_base_info_no_reviews(self):
-        Review.objects.all().delete()           
+        Review.objects.all().delete()
         url = reverse('base-info')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
