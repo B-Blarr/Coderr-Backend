@@ -165,6 +165,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
+# When the app is served from a subpath (e.g. /coderr), set FORCE_SCRIPT_NAME
+# to that prefix. Django then prefixes the relative STATIC_URL and MEDIA_URL
+# below automatically, and reverse() generates correct URLs.
+FORCE_SCRIPT_NAME = os.getenv("FORCE_SCRIPT_NAME") or None
+
+# Keep STATIC_URL and MEDIA_URL relative (no leading slash) so that
+# FORCE_SCRIPT_NAME is applied to them.
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
