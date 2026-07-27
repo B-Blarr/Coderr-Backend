@@ -4,6 +4,7 @@ import logging
 
 from django.conf import settings
 from django.core.mail import EmailMessage
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -23,8 +24,13 @@ class ContactMessageView(APIView):
     throttle_classes = [ContactRateThrottle]
     serializer_class = ContactMessageSerializer
 
+    @extend_schema(exclude=True)
     def post(self, request):
-        """Store the message and send it to the configured recipient."""
+        """Store the message and send it to the configured recipient.
+
+        Excluded from the generated API schema: this endpoint belongs to
+        the portfolio contact form and is not part of the Coderr API.
+        """
         serializer = ContactMessageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
