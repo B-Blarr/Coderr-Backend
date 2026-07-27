@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'orders_app',
     'reviews_app',
     'base_app',
+    'contact_app',
     'drf_spectacular',
 ]
 
@@ -184,7 +185,41 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_RATES': {
+        'contact': '5/hour',
+    },
 }
+
+
+# Cache
+# The database cache is shared across all Gunicorn workers, so the
+# throttling above counts correctly no matter which worker answers.
+# Create the table once with: manage.py createcachetable
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache',
+    }
+}
+
+
+# Email
+# Without EMAIL_HOST_USER the console backend is used, so local
+# development prints mails to the terminal instead of sending them.
+
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", "True")
+EMAIL_TIMEOUT = 15
+
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+CONTACT_RECIPIENT = os.getenv("CONTACT_RECIPIENT", "")
+
+if not EMAIL_HOST_USER:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
 SPECTACULAR_SETTINGS = {
