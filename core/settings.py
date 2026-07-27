@@ -26,14 +26,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv()
 
+
+def env_bool(name, default="False"):
+    """Read a boolean from the environment ('True'/'1'/'yes' are truthy)."""
+    return os.getenv(name, default).strip().lower() in ("true", "1", "yes", "on")
+
+
+def env_list(name, default=""):
+    """Read a comma separated list from the environment."""
+    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+
+
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY is not set in the environment variables.")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Defaults to True so the local development setup keeps working unchanged.
+DEBUG = env_bool("DEBUG", "True")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 
 # Application definition
@@ -67,7 +79,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = ['http://localhost:5500', 'http://127.0.0.1:5500']
+CORS_ALLOWED_ORIGINS = env_list(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:5500,http://127.0.0.1:5500",
+)
+
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 
 ROOT_URLCONF = 'core.urls'
 
@@ -91,13 +108,27 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+# Without DB_NAME in the environment the project falls back to the local
+# SQLite database, so the development setup keeps working unchanged.
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if os.getenv("DB_NAME"):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv("DB_NAME"),
+            'USER': os.getenv("DB_USER"),
+            'PASSWORD': os.getenv("DB_PASSWORD"),
+            'HOST': os.getenv("DB_HOST", "localhost"),
+            'PORT': os.getenv("DB_PORT", "5432"),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -135,6 +166,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 
 REST_FRAMEWORK = {
@@ -161,3 +193,54 @@ AUTH_USER_MODEL = "auth_app.User"
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+
+# Security settings for production
+# Only applied when DEBUG is off, so local development is unaffected.
+# Nginx terminates TLS and forwards X-Forwarded-Proto, therefore Django needs
+# to be told that the original request was HTTPS.
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'
+    X_FRAME_OPTIONS = 'DENY'
+    # HSTS is cached by browsers, so it stays off until HTTPS is verified.
+    # Enable it afterwards by setting HSTS_SECONDS=31536000 in the .env file.
+    SECURE_HSTS_SECONDS = int(os.getenv("HSTS_SECONDS", "0"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("HSTS_INCLUDE_SUBDOMAINS")
+
+
+# Logging
+# Everything goes to stdout/stderr so that it ends up in the systemd journal
+# and can be read with: journalctl -u gunicorn -f
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
