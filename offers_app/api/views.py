@@ -61,24 +61,24 @@ class OfferViewSet(viewsets.ModelViewSet):
 
     def _filter_creator(self, queryset):
         """Filter offers by their creator's user id."""
-        raw = self.request.query_params.get('creator_id')
-        if raw is not None:
+        raw = self.request.query_params.get('creator_id', '').strip()
+        if raw:
             value = self._as_number(raw, 'creator_id', int)
             queryset = queryset.filter(user_id=value)
         return queryset
 
     def _filter_min_price(self, queryset):
         """Filter offers by a minimum price."""
-        raw = self.request.query_params.get('min_price')
-        if raw is not None:
+        raw = self.request.query_params.get('min_price', '').strip()
+        if raw:
             value = self._as_number(raw, 'min_price', float)
             queryset = queryset.filter(min_price__gte=value)
         return queryset
 
     def _filter_max_delivery(self, queryset):
         """Filter offers by a maximum delivery time."""
-        raw = self.request.query_params.get('max_delivery_time')
-        if raw is not None:
+        raw = self.request.query_params.get('max_delivery_time', '').strip()
+        if raw:
             value = self._as_number(raw, 'max_delivery_time', int)
             queryset = queryset.filter(min_delivery_time__lte=value)
         return queryset

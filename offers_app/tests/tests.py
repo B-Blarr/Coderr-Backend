@@ -148,3 +148,38 @@ class OfferTests(APITestCase):
         url = reverse('offer-detail', kwargs={'pk': self.offer.id})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_offer_list_with_empty_filter_params(self):
+        """Empty filter values mean "no filter", not "invalid number".
+
+        The frontend always appends every filter to the query string,
+        including the ones the user did not set. A request like
+        ?creator_id=&search=&ordering=&page=1&max_delivery_time= must
+        therefore return the full list instead of a 400.
+        """
+        self.client.force_authenticate(user=self.customer)
+        url = reverse('offer-list')
+        response = self.client.get(url, {
+            'creator_id': '',
+            'search': '',
+            'ordering': '',
+            'page': 1,
+            'max_delivery_time': '',
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], Offer.objects.count())
+
+    def test_offer_list_with_invalid_creator_id_returns_400(self):
+        """A non-numeric value is still rejected."""
+        self.client.force_authenticate(user=self.customer)
+        url = reverse('offer-list')
+        response = self.client.get(url, {'creator_id': 'abc'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_offer_list_with_valid_creator_id_filters(self):
+        """A numeric value still filters as before."""
+        self.client.force_authenticate(user=self.customer)
+        url = reverse('offer-list')
+        response = self.client.get(url, {'creator_id': self.business.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)

@@ -87,3 +87,31 @@ class ReviewsTests(APITestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
+
+    def test_review_list_with_empty_filter_params(self):
+        """Empty ids mean "no filter" and must not crash the view."""
+        self.client.force_authenticate(user=self.business)
+        url = reverse('review-list')
+        response = self.client.get(url, {
+            'business_user_id': '',
+            'reviewer_id': '',
+            'ordering': '',
+        })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), Review.objects.count())
+
+    def test_review_list_with_invalid_id_returns_400(self):
+        """A non-numeric id returns a 400 instead of a server error."""
+        self.client.force_authenticate(user=self.business)
+        url = reverse('review-list')
+        response = self.client.get(url, {'business_user_id': 'undefined'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_review_list_with_valid_id_filters(self):
+        """A numeric id still filters as before."""
+        self.client.force_authenticate(user=self.business)
+        url = reverse('review-list')
+        response = self.client.get(
+            url, {'business_user_id': self.business.id})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
