@@ -20,6 +20,17 @@ class RegistrationSerializer(serializers.ModelSerializer):
             }
         }
 
+    def validate_email(self, value):
+        """Reject an address that another account already uses.
+
+        Django does not enforce uniqueness on the email field, so the
+        check has to happen here.
+        """
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                'This email address is already in use.')
+        return value
+
     def validate(self, attrs):
         """Ensure the two password fields match."""
         if attrs['password'] != attrs['repeated_password']:

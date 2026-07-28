@@ -142,3 +142,37 @@ class ProfileTests(APITestCase):
 
     def test_model_str_representation(self):
         self.assertEqual(str(self.business), 'testuserB')
+
+    def test_registration_duplicate_email_returns_400(self):
+        """An address that is already in use must be rejected.
+
+        Django does not enforce uniqueness on the email field, so
+        without an explicit check two accounts could share one address.
+        """
+        User.objects.create_user(
+            username='vorhanden', email='doppelt@test.de',
+            password='pass1234', type='customer')
+        url = reverse('registration')
+        data = {
+            'username': 'neuernutzer', 'email': 'doppelt@test.de',
+            'password': 'pass1234', 'repeated_password': 'pass1234',
+            'type': 'customer',
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(
+            User.objects.filter(username='neuernutzer').exists())
+
+    def test_registration_duplicate_email_is_case_insensitive(self):
+        """Uppercase spelling must not slip past the check."""
+        User.objects.create_user(
+            username='vorhanden2', email='Gross@Test.de',
+            password='pass1234', type='customer')
+        url = reverse('registration')
+        data = {
+            'username': 'neuernutzer2', 'email': 'gross@test.de',
+            'password': 'pass1234', 'repeated_password': 'pass1234',
+            'type': 'customer',
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
