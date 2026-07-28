@@ -1,7 +1,10 @@
 """Management command that fills the database with demo data."""
 
 from decimal import Decimal
+from pathlib import Path
 
+from django.conf import settings
+from django.core.files import File
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -9,9 +12,12 @@ from auth_app.models import User
 from offers_app.models import Offer, OfferDetail
 from reviews_app.models import Review
 
+SEED_IMAGES = Path(settings.BASE_DIR) / 'seed_images'
+
 BUSINESS_USERS = [
     {
         "username": "kevin",
+        "image": "profile-kevin.jpg",
         "password": "asdasd24",
         "first_name": "Kevin",
         "last_name": "Anbieter",
@@ -25,6 +31,7 @@ BUSINESS_USERS = [
     },
     {
         "username": "lisa_design",
+        "image": "profile-lisa.jpg",
         "password": "demo-lisa-2026",
         "first_name": "Lisa",
         "last_name": "Hoffmann",
@@ -39,6 +46,7 @@ BUSINESS_USERS = [
     },
     {
         "username": "thomas_ops",
+        "image": "profile-thomas.jpg",
         "password": "demo-thomas-2026",
         "first_name": "Thomas",
         "last_name": "Berger",
@@ -56,6 +64,7 @@ BUSINESS_USERS = [
 CUSTOMER_USERS = [
     {
         "username": "andrey",
+        "image": "profile-andrey.jpg",
         "password": "asdasd",
         "first_name": "Andrey",
         "last_name": "Kunde",
@@ -66,6 +75,7 @@ CUSTOMER_USERS = [
     },
     {
         "username": "maria_k",
+        "image": "profile-maria.jpg",
         "password": "demo-maria-2026",
         "first_name": "Maria",
         "last_name": "Klein",
@@ -110,6 +120,7 @@ OFFERS = [
     {
         "owner": "kevin",
         "title": "Django REST API nach deinen Anforderungen",
+        "image": "offer-api.jpg",
         "description": (
             "Ich baue dir eine saubere REST-Schnittstelle mit Django und "
             "dem Django REST Framework. Inklusive Authentifizierung, "
@@ -132,6 +143,7 @@ OFFERS = [
     {
         "owner": "kevin",
         "title": "Fullstack Web-App mit Angular und Django",
+        "image": "offer-fullstack.jpg",
         "description": (
             "Von der Datenbank bis zum Interface. Ich setze deine Idee "
             "als vollständige Anwendung um, responsive und mit "
@@ -152,6 +164,7 @@ OFFERS = [
     {
         "owner": "lisa_design",
         "title": "UI/UX Design für Web-Anwendungen",
+        "image": "offer-design.jpg",
         "description": (
             "Ich entwerfe Interfaces, die Nutzer ohne Erklärung "
             "verstehen. Du bekommst klickbare Prototypen und ein "
@@ -173,6 +186,7 @@ OFFERS = [
     {
         "owner": "lisa_design",
         "title": "Logo und Markenauftritt",
+        "image": "offer-branding.jpg",
         "description": (
             "Ein Logo ist erst fertig, wenn es auf dem Handy genauso "
             "funktioniert wie auf einem Messestand. Du bekommst alle "
@@ -193,6 +207,7 @@ OFFERS = [
     {
         "owner": "thomas_ops",
         "title": "Docker-Setup und CI/CD-Pipeline",
+        "image": "offer-container.jpg",
         "description": (
             "Dein Projekt läuft bei jedem im Team gleich und wird per "
             "Knopfdruck ausgerollt. Ich richte Container, Pipeline und "
@@ -214,6 +229,7 @@ OFFERS = [
     {
         "owner": "thomas_ops",
         "title": "Server-Deployment für Django-Projekte",
+        "image": "offer-server.jpg",
         "description": (
             "Ich bringe deine Django-Anwendung auf einen eigenen Server: "
             "Gunicorn, Nginx, PostgreSQL, HTTPS und automatische "
@@ -310,6 +326,7 @@ class Command(BaseCommand):
         for entry in entries:
             data = dict(entry)
             password = data.pop("password")
+            image = data.pop("image", None)
             data["type"] = user_type
             user, created = User.objects.get_or_create(
                 username=data["username"], defaults=data,
@@ -318,6 +335,7 @@ class Command(BaseCommand):
                 setattr(user, field, value)
             user.set_password(password)
             user.save()
+            self._attach_image(user, "file", image)
             created_users[user.username] = user
             self._log(created, f"{user.username} ({user_type})")
         return created_users
@@ -332,6 +350,7 @@ class Command(BaseCommand):
             )
             offer.description = entry["description"]
             offer.save()
+            self._attach_image(offer, "image", entry.get("image"))
             for detail in entry["details"]:
                 OfferDetail.objects.update_or_create(
                     offer=offer,
@@ -359,6 +378,23 @@ class Command(BaseCommand):
                 f"({entry['rating']}/5)"
             )
             self._log(created, label)
+
+    def _attach_image(self, obj, field, filename):
+        """Attach a seed image when the field is still empty.
+
+        Existing files are never replaced, so pictures uploaded through
+        the frontend survive a repeated run of this command.
+        """
+        if not filename or getattr(obj, field):
+            return
+        path = SEED_IMAGES / filename
+        if not path.exists():
+            self.stdout.write(
+                self.style.WARNING(f"  Bild nicht gefunden: {filename}")
+            )
+            return
+        with path.open("rb") as handle:
+            getattr(obj, field).save(filename, File(handle), save=True)
 
     def _log(self, created, label):
         """Write one status line, green when a record was created."""
