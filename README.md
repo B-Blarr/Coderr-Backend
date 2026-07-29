@@ -5,6 +5,13 @@ It provides token-authenticated endpoints for business users to publish
 service offers, for customers to order and review them, and for platform-wide
 statistics, built with Django and the Django REST Framework.
 
+👉 **[Live demo](https://coderr.benjaminblarr.de/)** ·
+**[API documentation](https://coderr.benjaminblarr.de/api/schema/swagger-ui/)**
+
+The login page offers guest access for both user types, so the demo can be
+explored without registering. The frontend is provided by the Developer
+Akademie; everything behind `/api/` is this project.
+
 ---
 
 ## Features
@@ -23,14 +30,15 @@ statistics, built with Django and the Django REST Framework.
 
 ## Tech Stack
 
-| Component  | Version                              |
-| ---------- | ------------------------------------ |
-| Language   | Python 3.12+ (required by Django 6)  |
-| Framework  | Django 6.0.6                         |
-| API        | Django REST Framework 3.17.1         |
-| Database   | SQLite                               |
-| Auth       | DRF Token Authentication             |
-| API Docs   | drf-spectacular 0.30.0 (OpenAPI 3)   |
+| Component  | Version                                      |
+| ---------- | -------------------------------------------- |
+| Language   | Python 3.12+ (required by Django 6)          |
+| Framework  | Django 6.0.6                                 |
+| API        | Django REST Framework 3.17.1                 |
+| Database   | SQLite (development) / PostgreSQL (production)|
+| Auth       | DRF Token Authentication                     |
+| API Docs   | drf-spectacular 0.30.0 (OpenAPI 3)           |
+| Serving    | Gunicorn behind Nginx (Ubuntu 24.04)         |
 
 ---
 
@@ -77,7 +85,7 @@ coderr_backend/
    python -m venv .venv
    ```
 
-   Activate it — **Windows (PowerShell):**
+   Activate it. **Windows (PowerShell):**
 
    ```powershell
    .\.venv\Scripts\Activate.ps1
@@ -129,13 +137,27 @@ coderr_backend/
    python manage.py createsuperuser
    ```
 
-7. **Run the development server**
+7. **(Optional) Seed demo data**, six offers, five reviews and the guest
+   accounts the frontend expects:
+
+   ```bash
+   python manage.py seed_demo
+   ```
+
+   The command is idempotent and runs in a transaction, so it can be repeated
+   safely.
+
+8. **Run the development server**
 
    ```bash
    python manage.py runserver
    ```
 
    The API is now available at `http://127.0.0.1:8000/`.
+
+Without any environment variables set, the project runs in development mode:
+`DEBUG=True` and a local SQLite file. Production settings are switched on
+purely through the `.env` file.
 
 ---
 
@@ -261,7 +283,7 @@ Base path: `/api/`
 - **Profile fields are never `null`:** missing values are returned as empty
   strings `""`.
 - **Offer `offer_type`:** one of `basic`, `standard`, `premium`. Every offer has
-  exactly three details — one per type.
+  exactly three details, one per type.
 - **Order `status`:** one of `in_progress`, `completed`, `cancelled`.
 - **Orders are snapshots:** creating an order copies the chosen offer detail's
   fields (title, price, features, …); there is no foreign key back to the detail,
@@ -271,3 +293,16 @@ Base path: `/api/`
 - **Offers list query params:** `creator_id`, `min_price`, `max_delivery_time`,
   `search` (title/description), `ordering` (`updated_at` | `min_price`) and
   `page_size`. The response is paginated (`count`, `next`, `previous`, `results`).
+
+---
+
+## Deployment
+
+The live instance runs on a VPS I set up and maintain myself: Ubuntu 24.04,
+Nginx as the reverse proxy, Gunicorn serving Django over a Unix socket,
+PostgreSQL as the database and TLS certificates from Let's Encrypt. Database
+and media backups run nightly through a systemd timer.
+
+The complete runbook is in [DEPLOYMENT.md](DEPLOYMENT.md): every step from an
+empty server to the running site, the configuration files, and a section on
+the mistakes that actually happened along the way.

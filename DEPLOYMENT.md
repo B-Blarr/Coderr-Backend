@@ -1077,19 +1077,20 @@ Für die Zukunft: Secret Key ab dem ersten Commit in die `.env`.
 
 ## 8. Offene Punkte
 
-- [ ] `src/app/sendMail.php` und `src/.htaccess` im Portfolio-Repo
-      entfernen, beide werden nicht mehr benutzt
-- [ ] Darstellung auf zwei Tablet-Breiten im Portfolio nacharbeiten
 - [ ] Wiederherstellung einer Sicherung einmal proben, mit einer
       Kopie der Datenbank und nicht mit der echten
-- [ ] Webhosting-Tarif kündigen. `benjaminblarr.dev` läuft bis
-      06.02.2027 und ist eigenständig registriert, geht also nicht
-      verloren
-- [ ] TTL der DNS-Einträge von 300 auf einen höheren Wert setzen, jetzt
-      wo die Umstellung durch ist
-- [ ] Überlegen, ob die Weiterleitung von `benjaminblarr.dev` nach
-      Ablauf verlängert wird. Sinnvoll, solange alte Links im Umlauf
-      sind, etwa in Bewerbungen oder auf LinkedIn
+- [ ] Entscheiden, ob `benjaminblarr.dev` über den 06.02.2027 hinaus
+      verlängert wird. Die automatische Verlängerung steht derzeit auf
+      aus. Solange die Domain lebt, funktionieren alte Links aus
+      Bewerbungen und von LinkedIn über die Weiterleitung weiter.
+      Läuft sie aus, laufen diese Links ins Leere und der Name wird
+      für jeden frei
+- [ ] Alte DNS-Einträge in der `.dev`-Zone aufräumen, sobald über den
+      Punkt darüber entschieden ist: `A ftp` auf den alten
+      Webhosting-Server, die drei `hostingermail-*._domainkey`, die
+      beiden `MX`, `autodiscover`, `autoconfig` und der SPF-Eintrag.
+      **Nicht anfassen:** `A @`, `AAAA @` und `CNAME www`, die zeigen
+      auf den VPS und tragen die Weiterleitung
 
 ### Erledigt am 29.07.2026
 
@@ -1099,6 +1100,13 @@ Für die Zukunft: Secret Key ab dem ersten Commit in die `.env`.
 - [x] Alte Adressen unter `/coderr/` leiten dauerhaft weiter, mit
       erhaltenem Pfad
 - [x] Portfolio-Link auf die neue Adresse gesetzt und neu ausgerollt
+- [x] `sendMail.php` und `.htaccess` aus dem Portfolio entfernt,
+      inklusive des Asset-Eintrags in `angular.json`
+- [x] DNS-TTL nach der Umstellung wieder hochgesetzt
+- [x] Webhosting-Tarif und ein Mail-Testabo auf auslaufend gestellt.
+      Das Hosting bleibt bis 06.05.2027 erreichbar, danach ist alles
+      dort Liegende weg
+- [x] Darstellung des Portfolios auf allen Breiten nachgearbeitet
 
 ### Erledigt am 27.07.2026
 
