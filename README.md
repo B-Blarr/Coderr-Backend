@@ -8,6 +8,8 @@ statistics, built with Django and the Django REST Framework.
 👉 **[Live demo](https://coderr.benjaminblarr.de/)** ·
 **[API documentation](https://coderr.benjaminblarr.de/api/schema/swagger-ui/)**
 
+![Coderr API documentation](assets/preview.jpg)
+
 The login page offers guest access for both user types, so the demo can be
 explored without registering. The frontend is provided by the Developer
 Akademie; everything behind `/api/` is this project.
