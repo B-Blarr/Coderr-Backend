@@ -2,15 +2,18 @@
 
 from django.db.models import Min, Q
 from rest_framework import generics, viewsets
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from offers_app.models import Offer, OfferDetail
 
 from .pagination import OfferPagination
 from .permissions import IsBusiness, IsOwnerOrReadOnly
-from .serializers import (OfferCreateSerializer, OfferDetailSerializer,
-                          OfferSerializer)
+from .serializers import (
+    OfferCreateSerializer,
+    OfferDetailSerializer,
+    OfferSerializer,
+)
 
 
 class OfferViewSet(viewsets.ModelViewSet):
