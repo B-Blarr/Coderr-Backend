@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          # Matches the server. Quoted because YAML reads 3.10 as 3.1.
+          python-version: "3.12"
+          cache: pip
+          # requirements-dev.txt pulls in requirements.txt via -r, but the
+          # cache key only hashes the files listed here. Both are named so a
+          # change to either one refreshes the cache.
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run flake8
+        run: flake8
+
+      # !cancelled() keeps the remaining checks running after an earlier
+      # failure, so one push reports every problem instead of only the first.
+      - name: Check import order
+        if: '!cancelled()'
+        run: isort --check-only --diff .
