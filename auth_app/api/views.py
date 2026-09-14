@@ -9,9 +9,13 @@ from rest_framework.views import APIView
 from auth_app.models import User
 
 from .permissions import IsOwnerOrReadOnly
-from .serializers import (BusinessProfileSerializer, CustomerProfileSerializer,
-                          LoginSerializer, ProfileDetailSerializer,
-                          RegistrationSerializer)
+from .serializers import (
+    BusinessProfileSerializer,
+    CustomerProfileSerializer,
+    LoginSerializer,
+    ProfileDetailSerializer,
+    RegistrationSerializer,
+)
 
 
 class RegistrationView(APIView):

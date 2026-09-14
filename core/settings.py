@@ -29,12 +29,15 @@ load_dotenv()
 
 def env_bool(name, default="False"):
     """Read a boolean from the environment ('True'/'1'/'yes' are truthy)."""
-    return os.getenv(name, default).strip().lower() in ("true", "1", "yes", "on")
+    value = os.getenv(name, default).strip().lower()
+    return value in ("true", "1", "yes", "on")
 
 
 def env_list(name, default=""):
     """Read a comma separated list from the environment."""
-    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+    return [item.strip()
+            for item in os.getenv(name, default).split(",")
+            if item.strip()]
 
 
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -135,19 +138,13 @@ else:
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
+_PASSWORD_VALIDATION = 'django.contrib.auth.password_validation'
+
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': f'{_PASSWORD_VALIDATION}.UserAttributeSimilarityValidator'},
+    {'NAME': f'{_PASSWORD_VALIDATION}.MinimumLengthValidator'},
+    {'NAME': f'{_PASSWORD_VALIDATION}.CommonPasswordValidator'},
+    {'NAME': f'{_PASSWORD_VALIDATION}.NumericPasswordValidator'},
 ]
 
 

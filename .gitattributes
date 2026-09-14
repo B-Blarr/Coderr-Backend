@@ -1,0 +1,24 @@
+# =====================================================================
+# Line endings
+#
+# Single source of truth for this repository. It wins over whatever
+# core.autocrlf a machine happens to have configured locally.
+#
+# Reason: the code runs on a Linux server and is checked on a Linux CI
+# runner. Shell scripts with CRLF (\r\n) break there, e.g.
+# "/bin/bash^M: bad interpreter".
+# =====================================================================
+
+# Default: Git detects text files on its own, always stores them with
+# LF, and thanks to eol=lf checks them out with LF on Windows too.
+* text=auto eol=lf
+
+# --- Windows tools expect CRLF ---
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# --- Binary files: Git must never convert these ---
+*.jpg   -text
+*.jpeg  -text
+*.png   -text
