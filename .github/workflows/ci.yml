@@ -127,7 +127,7 @@ jobs:
 
       # The script is never copied to the server: bash reads it from stdin.
       # github.sha is exactly the commit the checks above have tested.
-      - name: Deploy to server (dry run)
+      - name: Deploy to server
         run: |
           ssh -i ~/.ssh/deploy_key \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
