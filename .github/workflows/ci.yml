@@ -37,3 +37,62 @@ jobs:
       - name: Check import order
         if: '!cancelled()'
         run: isort --check-only --diff .
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    # PostgreSQL 16 matches the server. Locally the suite runs on SQLite,
+    # so this is where it meets the production database engine.
+    services:
+      db:
+        image: postgres:16
+        # Throwaway credentials: the container exists only for this run and
+        # cannot be reached from outside the runner.
+        env:
+          POSTGRES_DB: coderr
+          POSTGRES_USER: coderr
+          POSTGRES_PASSWORD: coderr
+        ports:
+          - 5432:5432
+        # Without the health check the tests can start before PostgreSQL
+        # accepts connections, which fails the run for no real reason.
+        options: >-
+          --health-cmd "pg_isready -U coderr -d coderr"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # A set DB_NAME switches settings.py from SQLite to PostgreSQL.
+      DB_NAME: coderr
+      DB_USER: coderr
+      DB_PASSWORD: coderr
+      DB_HOST: localhost
+      DB_PORT: 5432
+      # Throwaway value for the test run. Not a secret, used nowhere else.
+      SECRET_KEY: ci-only-key-not-used-outside-this-workflow
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # --check fails on a missing migration, --dry-run writes nothing.
+      - name: Check for missing migrations
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run tests
+        if: '!cancelled()'
+        run: coverage run --source=. --omit="*/tests/*,*/migrations/*" manage.py test
+
+      # Reported for information. A drop in coverage does not fail the build.
+      - name: Coverage report
+        run: coverage report
