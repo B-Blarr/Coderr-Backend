@@ -100,6 +100,8 @@ Warum umgestellt wurde, steht in Abschnitt 7.
 /etc/systemd/system/gunicorn-coderr.service     Dienstdefinition
 /etc/ssh/sshd_config.d/00-hardening.conf        SSH-Absicherung
 /usr/local/bin/backup-coderr.sh                 tägliche Sicherung
+/var/backups/coderr/                            nächtliche Sicherungen, 14 Tage
+/home/benni/backups/coderr/                     Sicherungen vor jedem Deploy, letzte 10
 /swapfile                                        2 GB Swap
 ```
 
@@ -788,14 +790,37 @@ server {
 
 ### 5.1 Code-Änderung ausrollen
 
+Seit dem 14.09.2026 automatisch. Ein Push auf `main`, also ein gemergter
+Pull Request, startet in GitHub Actions den Workflow `CI/CD`. Sind `Lint`
+und `Tests` grün, schickt der Job `Deploy` das Skript `deploy/deploy.sh`
+per SSH an den Server. Das Skript
+
+1. bricht ab, wenn auf dem Server versionierte Dateien geändert wurden,
+2. sichert die Datenbank nach `~/backups/coderr/` (siehe 5.5),
+3. setzt den Code mit `git merge --ff-only` auf genau den geprüften Commit,
+4. führt `pip install`, `check`, `migrate` und `collectstatic` aus,
+5. lädt Gunicorn per `HUP` neu, ohne laufende Anfragen abzubrechen.
+
+Danach prüft der Job von außen, ob `/api/base-info/` JSON und eine
+statische Datei CSS liefert.
+
+Schritt 4 läuft bei jedem Deploy, auch ohne Änderung. Scheitert ein
+Deploy nach dem Merge, holt **Re-run jobs** ihn deshalb vollständig nach.
+
+Nur wenn GitHub Actions nicht verfügbar ist, von Hand vom Arbeitsrechner
+in **Git Bash** (PowerShell 5.1 kennt die Umleitung mit `<` nicht), im
+Repository:
+
 ```bash
-cd /var/www/coderr/backend
-git pull
-.venv/bin/pip install -r requirements.txt      # nur bei neuen Paketen
-.venv/bin/python manage.py migrate             # nur bei neuen Migrationen
-.venv/bin/python manage.py collectstatic --noinput
+git fetch
+ssh vps "bash -s -- $(git rev-parse origin/main)" < deploy/deploy.sh
+```
+
+Bekommt Gunicorn selbst eine neue Version, reicht `HUP` nicht. Dann
+einmal von Hand:
+
+```bash
 sudo systemctl restart gunicorn-coderr
-sudo systemctl status gunicorn-coderr --no-pager
 ```
 
 ### 5.2 Logs ansehen
@@ -845,13 +870,24 @@ Der Befehl ist wiederholbar. Vorhandene Datensätze werden aktualisiert,
 nicht doppelt angelegt. Er läuft in einer Transaktion, bei einem Fehler
 bleibt der vorherige Zustand erhalten.
 
-### 5.5 Datenbank sichern
+### 5.5 Datenbank sichern und wiederherstellen
 
-Läuft automatisch täglich um 03:30 Uhr Serverzeit (UTC) über
-`/usr/local/bin/backup-coderr.sh`, ausgelöst von
-`coderr-backup.timer`. Gesichert werden die Datenbank und der
-`media`-Ordner, Ablage unter `/var/backups/coderr/`, Aufbewahrung
-14 Tage.
+Es gibt zwei Sicherungen, beide als gepacktes SQL aus `pg_dump`.
+
+| | nächtlich | vor jedem Deploy |
+|---|---|---|
+| Auslöser | `coderr-backup.timer`, täglich 03:30 UTC | `deploy/deploy.sh`, vor dem Merge |
+| Ablage | `/var/backups/coderr/db-<Datum>.sql.gz` | `~/backups/coderr/<Datum>_<Kurz-Hash>.sql.gz` |
+| erstellt als | `postgres`, über `/usr/local/bin/backup-coderr.sh` | `coderr`, Passwort aus der `.env` |
+| Aufbewahrung | 14 Tage | die letzten 10 |
+| Media-Ordner | ja, als `media-<Datum>.tar.gz` | nein |
+
+**Der Kurz-Hash im Dateinamen ist der Commit, der ausgerollt werden
+sollte, nicht der, zu dem die Sicherung passt.** Die Sicherung entsteht
+vor dem Merge und enthält den Stand davor. Genau diese Datei braucht man,
+wenn ein Deploy mit Migration zurückgenommen werden muss.
+
+Die nächtliche Sicherung:
 
 ```bash
 # Status und naechster Lauf
@@ -862,10 +898,6 @@ sudo journalctl -u coderr-backup -n 30 --no-pager
 
 # Sofort ausfuehren
 sudo /usr/local/bin/backup-coderr.sh
-
-# Sicherung einspielen
-gunzip -c /var/backups/coderr/db-2026-07-27_0330.sql.gz \
-  | sudo -u postgres psql coderr
 ```
 
 Der Timer nutzt `Persistent=true`, ein wegen Neustart verpasster Lauf
@@ -876,6 +908,134 @@ Hostinger erstellt zusätzlich wöchentlich automatische Backups des
 gesamten Servers. Ein manueller Snapshot vor riskanten Änderungen ist im
 hPanel kostenlos möglich, allerdings nur einer gleichzeitig und mit
 einem Tag Haltbarkeit.
+
+#### Einspielen proben
+
+`deploy/restore_probe.sh` spielt eine Sicherung in die Wegwerf-Datenbank
+`coderr_restore_test` ein und löscht sie am Ende wieder, auch nach einem
+Fehler. Dazwischen vergleicht es die Zeilenzahl jeder Tabelle mit der
+echten Datenbank, prüft, ob eine ID-Sequenz hinter der höchsten ID liegt,
+und fragt Django mit `migrate --plan`, ob der ausgerollte Code an der
+Kopie noch etwas migrieren würde. Die echte Datenbank wird nur gelesen.
+`sudo` ist nicht nötig, weil `coderr` das Recht `CREATEDB` hat
+(Abschnitt 3.8).
+
+Vom Arbeitsrechner, in PowerShell im Repository:
+
+```powershell
+scp deploy/restore_probe.sh vps:restore_probe.sh
+ssh vps "bash ~/restore_probe.sh ~/backups/coderr/<datei>.sql.gz"
+ssh vps "bash ~/restore_probe.sh /var/backups/coderr/<datei>.sql.gz"
+ssh vps "rm ~/restore_probe.sh"
+```
+
+So wird das Ergebnis gelesen:
+
+- **Unter `messages` steht nichts.** Das Einspielen läuft mit
+  `ON_ERROR_STOP`, schon der erste Fehler bricht ab und steht dort.
+- **`<- differs` ist nicht automatisch ein Fehler.** Die Live-Datenbank
+  ist neuer als die Sicherung. Ein Unterschied muss sich mit dem erklären
+  lassen, was seitdem passiert ist.
+- **Unter `Sequences` steht nichts.** Eine Sequenz unter der höchsten ID
+  lässt den nächsten neuen Datensatz an einem doppelten Schlüssel
+  scheitern, und das zeigt keine Zeilenzahl.
+- **`No planned migration operations`.** Das gilt nur, solange seit der
+  Sicherung keine Migration ausgerollt wurde.
+
+Geprobt am 15.09.2026 mit beiden Arten: beide in einer Sekunde und ohne
+Meldung eingespielt, Sequenzen in Ordnung, keine offene Migration. Die
+Deploy-Sicherung vom 14.09. abends hatte eine Kontaktnachricht und einen
+Cache-Eintrag weniger als die Live-Datenbank, die nächtliche vom 15.09.
+stimmte in allen 17 Tabellen überein. Der Media-Ordner war nicht Teil der
+Probe.
+
+#### Notfall: Datenbank aus einer Sicherung zurückholen
+
+Für einen Deploy, dessen Migration zurückgenommen werden muss. **Nie in
+die laufende Datenbank `coderr` einspielen.** `pg_dump` schreibt reines
+SQL ohne vorheriges Löschen. In eine gefüllte Datenbank eingespielt,
+scheitern die Tabellen an „existiert bereits“, die Daten an doppelten
+Schlüsseln, und übrig bleibt ein Mischstand.
+
+Stattdessen entsteht die Kopie neben der echten Datenbank, und beim
+Tausch bleibt die kaputte als `coderr_defekt` zum Vergleich liegen.
+**Geprobt ist das Einspielen bis Schritt 3, der Tausch ab Schritt 4 noch
+nicht** (Abschnitt 8).
+
+**1. Sicherung wählen.** Die Datei, deren Kurz-Hash der gescheiterte
+Commit ist:
+
+```bash
+ls -1t ~/backups/coderr/
+```
+
+**2. Zugang als `coderr` setzen.** Das Passwort kommt aus der `.env` und
+erscheint nicht auf dem Bildschirm:
+
+```bash
+cd /var/www/coderr/backend
+export PGHOST=localhost PGUSER=coderr
+export PGPASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2- | tr -d "\r\"'")"
+```
+
+**3. In eine neue Datenbank einspielen**, während Coderr noch läuft:
+
+```bash
+createdb coderr_neu
+gunzip -c ~/backups/coderr/<datei>.sql.gz | psql -X -q -v ON_ERROR_STOP=1 -d coderr_neu
+```
+
+Bricht das ab: `dropdb coderr_neu`. Die echte Datenbank ist unberührt.
+
+**4. Anhalten und den Code zurücksetzen.** Ab hier sind Coderr und das
+Kontaktformular des Portfolios offline. Der Commit vor dem Deploy steht
+im Protokoll des Deploy-Jobs in der Zeile `Server:`, auf dem Server im
+Reflog als Eintrag vor dem `merge`:
+
+```bash
+sudo systemctl stop gunicorn-coderr
+git reflog -5
+git reset --hard <commit vor dem merge>
+```
+
+**5. Die Datenbanken tauschen.** Umbenennen darf `coderr` als Besitzer
+mit `CREATEDB`. Es scheitert, solange noch jemand mit der Datenbank
+verbunden ist:
+
+```bash
+psql -X -d postgres -c 'ALTER DATABASE coderr RENAME TO coderr_defekt'
+psql -X -d postgres -c 'ALTER DATABASE coderr_neu RENAME TO coderr'
+```
+
+**6. Prüfen und starten:**
+
+```bash
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python manage.py migrate --plan
+.venv/bin/python manage.py collectstatic --noinput
+sudo systemctl start gunicorn-coderr
+```
+
+`migrate --plan` muss `No planned migration operations` melden, bevor
+Gunicorn startet. Sonst passen Code und Sicherung nicht zusammen.
+
+**7. Danach.** `unset PGPASSWORD`. Den gescheiterten Commit auf GitHub
+per Revert-PR zurücknehmen. **Den gescheiterten Deploy-Job nicht mit
+Re-run jobs neu starten**, er würde denselben Commit samt Migration
+wieder ausrollen. `coderr_defekt` erst mit `dropdb coderr_defekt`
+löschen, wenn klar ist, dass daraus nichts mehr gebraucht wird.
+
+**Ohne Migration** braucht es keine Sicherung und keine Ausfallzeit:
+
+```bash
+cd /var/www/coderr/backend
+git reset --hard <commit vor dem merge>
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python manage.py collectstatic --noinput
+kill -HUP "$(systemctl show -p MainPID --value gunicorn-coderr)"
+```
+
+Auch dann gilt Schritt 7: Revert-PR, kein Re-run.
 
 ### 5.6 Kontaktformular
 
@@ -1077,20 +1237,27 @@ Für die Zukunft: Secret Key ab dem ersten Commit in die `.env`.
 
 ## 8. Offene Punkte
 
-- [ ] Wiederherstellung einer Sicherung einmal proben, mit einer
-      Kopie der Datenbank und nicht mit der echten
-- [ ] Entscheiden, ob `benjaminblarr.dev` über den 06.02.2027 hinaus
-      verlängert wird. Die automatische Verlängerung steht derzeit auf
-      aus. Solange die Domain lebt, funktionieren alte Links aus
-      Bewerbungen und von LinkedIn über die Weiterleitung weiter.
-      Läuft sie aus, laufen diese Links ins Leere und der Name wird
-      für jeden frei
-- [ ] Alte DNS-Einträge in der `.dev`-Zone aufräumen, sobald über den
-      Punkt darüber entschieden ist: `A ftp` auf den alten
+- [ ] Das Umbenennen aus 5.5, Schritt 5, einmal proben. Das geht ohne
+      Ausfallzeit an einer Kopie: einspielen, umbenennen, löschen
+- [ ] Alte DNS-Einträge in der `.dev`-Zone aufräumen, seit der
+      Entscheidung vom 15.09.2026 freigegeben: `A ftp` auf den alten
       Webhosting-Server, die drei `hostingermail-*._domainkey`, die
       beiden `MX`, `autodiscover`, `autoconfig` und der SPF-Eintrag.
       **Nicht anfassen:** `A @`, `AAAA @` und `CNAME www`, die zeigen
-      auf den VPS und tragen die Weiterleitung
+      auf den VPS und tragen die Weiterleitung bis zum Ablauf
+- [ ] Ab dem 09.02.2027, nach dem Ablauf: den Nginx-Block
+      `benjaminblarr-dev` (Abschnitt 4.6) samt Verweis in
+      `sites-enabled` und das Zertifikat für `benjaminblarr.dev` vom
+      Server entfernen. Sonst versucht certbot weiter, ein Zertifikat
+      für eine Domain zu erneuern, die es nicht mehr gibt
+
+### Erledigt am 15.09.2026
+
+- [x] Einspielen beider Sicherungsarten in eine Kopie der Datenbank
+      geprobt, fehlerfrei, siehe 5.5 und `deploy/restore_probe.sh`
+- [x] Entschieden: `benjaminblarr.dev` wird nicht verlängert und läuft
+      am 06.02.2027 aus. Alte Links aus Bewerbungen und von LinkedIn
+      führen danach ins Leere, und der Name wird für jeden frei
 
 ### Erledigt am 29.07.2026
 
