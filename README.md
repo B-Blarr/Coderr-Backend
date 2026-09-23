@@ -57,7 +57,7 @@ Akademie; everything behind `/api/` is this project.
 | Language   | Python 3.12+ (required by Django 6)          |
 | Framework  | Django 6.0.6                                 |
 | API        | Django REST Framework 3.17.1                 |
-| Database   | SQLite (development) / PostgreSQL (production)|
+| Database   | PostgreSQL 16 with pgvector (Docker locally) |
 | Auth       | DRF Token Authentication                     |
 | API Docs   | drf-spectacular 0.30.0 (OpenAPI 3)           |
 | Serving    | Gunicorn behind Nginx (Ubuntu 24.04)         |
@@ -91,6 +91,7 @@ coderr_backend/
 
 - Python 3.12 or newer
 - `pip` and `venv`
+- Docker with Docker Compose, for the local PostgreSQL database
 
 ### Installation
 
@@ -147,19 +148,28 @@ coderr_backend/
    python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
    ```
 
-5. **Apply the database migrations**
+5. **Start the database**, PostgreSQL 16 with pgvector in Docker:
+
+   ```bash
+   docker compose up -d
+   ```
+
+   It listens on `127.0.0.1:5433` and matches the values in `.env.example`.
+   Wait until `docker compose ps` shows the container as `healthy`.
+
+6. **Apply the database migrations**
 
    ```bash
    python manage.py migrate
    ```
 
-6. **(Optional) Create an admin user** to use the Django admin at `/admin/`:
+7. **(Optional) Create an admin user** to use the Django admin at `/admin/`:
 
    ```bash
    python manage.py createsuperuser
    ```
 
-7. **(Optional) Seed demo data**, six offers, five reviews and the guest
+8. **(Optional) Seed demo data**, six offers, five reviews and the guest
    accounts the frontend expects:
 
    ```bash
@@ -169,7 +179,7 @@ coderr_backend/
    The command is idempotent and runs in a transaction, so it can be repeated
    safely.
 
-8. **Run the development server**
+9. **Run the development server**
 
    ```bash
    python manage.py runserver
@@ -178,7 +188,8 @@ coderr_backend/
    The API is now available at `http://127.0.0.1:8000/`.
 
 Without any environment variables set, the project runs in development mode:
-`DEBUG=True` and a local SQLite file. Production settings are switched on
+`DEBUG=True` and a local SQLite file. The SQLite fallback cannot hold vector
+data, so the setup above uses PostgreSQL. Production settings are switched on
 purely through the `.env` file.
 
 ---

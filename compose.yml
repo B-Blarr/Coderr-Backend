@@ -1,0 +1,27 @@
+# Local development only. Production runs PostgreSQL natively on the server;
+# this container mirrors its major version and adds pgvector.
+services:
+  db:
+    # Pinned to the pgvector version Ubuntu 24.04 ships for the server.
+    # This tag also freezes PostgreSQL at 16.1. Minor releases only carry
+    # fixes, so the pgvector version is the one that has to match.
+    image: pgvector/pgvector:0.6.0-pg16
+    # Throwaway credentials, applied only when the volume is first created.
+    environment:
+      POSTGRES_DB: coderr
+      POSTGRES_USER: coderr
+      POSTGRES_PASSWORD: coderr
+    ports:
+      # Host port 5433 because a native PostgreSQL may already hold 5432.
+      # Bound to 127.0.0.1 so the database is not reachable from the network.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coderr -d coderr"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
