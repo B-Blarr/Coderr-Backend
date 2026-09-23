@@ -42,11 +42,11 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
 
-    # PostgreSQL 16 matches the server. Locally the suite runs on SQLite,
-    # so this is where it meets the production database engine.
+    # Same image as compose.yml: PostgreSQL 16 with the pgvector version
+    # the server installs from Ubuntu 24.04.
     services:
       db:
-        image: postgres:16
+        image: pgvector/pgvector:0.6.0-pg16
         # Throwaway credentials: the container exists only for this run and
         # cannot be reached from outside the runner.
         env:
