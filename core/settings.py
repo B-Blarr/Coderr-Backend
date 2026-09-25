@@ -221,6 +221,14 @@ if not EMAIL_HOST_USER:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
+# Embedding service
+# Runs as its own process next to Django, see embedding_service/README.md.
+
+EMBEDDING_SERVICE_URL = os.getenv(
+    "EMBEDDING_SERVICE_URL", "http://127.0.0.1:8002"
+)
+
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Coderr API',
     'DESCRIPTION': 'Backend API for the Coderr freelancer platform.',
