@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
     'corsheaders',
     'rest_framework',
     'auth_app',
@@ -69,6 +70,7 @@ INSTALLED_APPS = [
     'reviews_app',
     'base_app',
     'contact_app',
+    'assistant_app',
     'drf_spectacular',
 ]
 
