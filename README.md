@@ -68,17 +68,25 @@ Akademie; everything behind `/api/` is this project.
 
 ```
 coderr_backend/
-├── core/          # Project settings, root URL config, WSGI/ASGI
-├── auth_app/      # Registration, login, profiles
-│   └── api/       # serializers.py, views.py, urls.py, permissions.py
-├── offers_app/    # Offers and offer details
-│   └── api/       # serializers.py, views.py, urls.py, permissions.py, pagination.py
-├── orders_app/    # Orders and order statistics
-│   └── api/       # serializers.py, views.py, urls.py, permissions.py
-├── reviews_app/   # Reviews
-│   └── api/       # serializers.py, views.py, urls.py, permissions.py
-├── base_app/      # Aggregated platform statistics (base-info)
-│   └── api/       # views.py, urls.py
+├── core/               # Project settings, root URL config, WSGI/ASGI
+├── auth_app/           # Registration, login, profiles
+│   └── api/            # serializers.py, views.py, urls.py, permissions.py
+├── offers_app/         # Offers and offer details
+│   └── api/            # serializers.py, views.py, urls.py, permissions.py, pagination.py
+├── orders_app/         # Orders and order statistics
+│   └── api/            # serializers.py, views.py, urls.py, permissions.py
+├── reviews_app/        # Reviews
+│   └── api/            # serializers.py, views.py, urls.py, permissions.py
+├── base_app/           # Aggregated platform statistics (base-info)
+│   └── api/            # views.py, urls.py
+├── contact_app/        # Contact form of the portfolio site
+├── assistant_app/      # Retrieval for the portfolio assistant
+│   ├── api/            # serializers.py, views.py, urls.py
+│   ├── knowledge/      # Knowledge base, one Markdown file per topic
+│   └── management/     # build_index, evaluate_retrieval
+├── embedding_service/  # Standalone FastAPI service that embeds texts
+├── deploy/             # Deployment script and Nginx configuration
+├── compose.yml         # Local PostgreSQL with pgvector
 ├── manage.py
 └── requirements.txt
 ```
@@ -187,10 +195,10 @@ coderr_backend/
 
    The API is now available at `http://127.0.0.1:8000/`.
 
-Without any environment variables set, the project runs in development mode:
-`DEBUG=True` and a local SQLite file. The SQLite fallback cannot hold vector
-data, so the setup above uses PostgreSQL. Production settings are switched on
-purely through the `.env` file.
+The project needs PostgreSQL: `settings.py` stops with an error when
+`DB_NAME` is missing, because the portfolio assistant stores its vectors with
+pgvector. Everything else defaults to development mode (`DEBUG=True`), and
+production settings are switched on purely through the `.env` file.
 
 ---
 
@@ -205,7 +213,7 @@ python manage.py test
 Measure test coverage (target: **≥ 95 %**):
 
 ```bash
-coverage run --source=auth_app,offers_app,orders_app,reviews_app,base_app --omit='*/migrations/*,*/tests/*' manage.py test
+coverage run --source=auth_app,offers_app,orders_app,reviews_app,base_app,assistant_app --omit='*/migrations/*,*/tests/*' manage.py test
 coverage report
 ```
 
@@ -326,6 +334,31 @@ Base path: `/api/`
 - **Offers list query params:** `creator_id`, `min_price`, `max_delivery_time`,
   `search` (title/description), `ordering` (`updated_at` | `min_price`) and
   `page_size`. The response is paginated (`count`, `next`, `previous`, `results`).
+
+---
+
+## Portfolio Assistant
+
+Besides the Coderr API, this backend serves the assistant on my portfolio
+site: visitors ask questions about me and my projects, and the answer comes
+from a knowledge base I maintain instead of being made up. The feature is
+under construction and not live yet.
+
+The current stage covers retrieval only, without a language model:
+
+1. `assistant_app/knowledge/*.md` holds the knowledge base, cut into sections
+   at every `##` heading.
+2. `python manage.py build_index` embeds every section through the
+   [embedding service](embedding_service/README.md) and stores the vectors in
+   PostgreSQL with pgvector.
+3. `POST /api/assistant/` with `{"question": "..."}` returns the five closest
+   sections with their cosine similarity.
+4. `python manage.py evaluate_retrieval` checks a fixed list of questions, in
+   German and English, against the sections they should find.
+
+The endpoint answers `503` unless `ASSISTANT_ENABLED=True` is set, so a server
+without the embedding service stays safe. Locally the embedding service runs
+in a second terminal, see its README.
 
 ---
 
