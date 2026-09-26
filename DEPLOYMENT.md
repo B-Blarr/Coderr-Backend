@@ -57,7 +57,7 @@ Portfolios, die Subdomain die komplette Coderr-Anwendung.
 | Webserver    | Nginx 1.24 (Ubuntu-Paket)              |
 | App-Server   | Gunicorn 26.0.0, 3 Worker, Unix-Socket |
 | Framework    | Django 6.0.6, DRF 3.17.1               |
-| Datenbank    | PostgreSQL 16                          |
+| Datenbank    | PostgreSQL 16, pgvector 0.6.0          |
 | Python       | 3.12.3                                 |
 | TLS          | Let's Encrypt via certbot, Auto-Renewal|
 
@@ -952,7 +952,11 @@ So wird das Ergebnis gelesen:
   `ON_ERROR_STOP`, schon der erste Fehler bricht ab und steht dort.
 - **`<- differs` ist nicht automatisch ein Fehler.** Die Live-Datenbank
   ist neuer als die Sicherung. Ein Unterschied muss sich mit dem erklären
-  lassen, was seitdem passiert ist.
+  lassen, was seitdem passiert ist. Nach einem Deploy mit neuem Modell
+  wachsen `django_migrations` um jede Migration, `django_content_type` um
+  eins und `auth_permission` um vier (add, change, delete, view) pro
+  Modell. Die letzten beiden legt Djangos `post_migrate` an, sie stehen in
+  keiner Migrationsdatei.
 - **Unter `Sequences` steht nichts.** Eine Sequenz unter der höchsten ID
   lässt den nächsten neuen Datensatz an einem doppelten Schlüssel
   scheitern, und das zeigt keine Zeilenzahl.
@@ -965,6 +969,16 @@ Deploy-Sicherung vom 14.09. abends hatte eine Kontaktnachricht und einen
 Cache-Eintrag weniger als die Live-Datenbank, die nächtliche vom 15.09.
 stimmte in allen 17 Tabellen überein. Der Media-Ordner war nicht Teil der
 Probe.
+
+Erneut geprobt am 26.09.2026 nach dem ersten Deploy mit pgvector, wieder
+mit beiden Arten. Beide enthalten `COMMENT ON EXTENSION vector` und liefen
+dank Filter und `template1` ohne Meldung durch. Die Deploy-Sicherung von
+vor dem Merge unterschied sich genau um das Deploy: die neue Tabelle
+fehlte, `django_migrations` +2, `django_content_type` +1,
+`auth_permission` +4, und `migrate --plan` nannte die beiden
+`assistant_app`-Migrationen. Die direkt danach von Hand angelegte
+nächtliche Sicherung (`sudo /usr/local/bin/backup-coderr.sh`) stimmte in
+allen 18 Tabellen überein, ohne offene Migration.
 
 #### Notfall: Datenbank aus einer Sicherung zurückholen
 
@@ -1002,6 +1016,7 @@ createdb coderr_neu
 gunzip -c ~/backups/coderr/<datei>.sql.gz | grep -v '^COMMENT ON EXTENSION' \
   | psql -X -q -v ON_ERROR_STOP=1 -d coderr_neu
 ```
+
 Das `grep -v` lässt die Zeile `COMMENT ON EXTENSION` weg. Sie darf nur der
 Eigentümer der Extension ausführen, und das ist `postgres`, nicht `coderr`.
 Ohne den Filter bricht das Einspielen an `must be owner of extension vector`
@@ -1284,7 +1299,11 @@ Für die Zukunft: Secret Key ab dem ersten Commit in die `.env`.
 - [x] `postgresql-16-pgvector` 0.6.0 installiert, ohne Neustart von
       PostgreSQL. Extension als `postgres` in `coderr` und `template1`
       angelegt
-
+- [x] Erster Deploy mit pgvector (PR #8): beide Migrationen angewendet,
+      Tabelle mit HNSW-Index angelegt, `/api/assistant/` antwortet 503,
+      solange `ASSISTANT_ENABLED` fehlt
+- [x] Einspielen beider Sicherungsarten mit pgvector geprobt, fehlerfrei,
+      siehe 5.5
 
 ### Erledigt am 15.09.2026
 
