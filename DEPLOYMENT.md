@@ -516,8 +516,9 @@ CONTACT_RECIPIENT=<Zieladresse der Formularnachrichten>
 ```
 
 Ohne gesetzte Variablen verhält sich das Projekt wie in der Entwicklung:
-`DEBUG=True`, SQLite, CORS auf `localhost:5500`. Der Produktionsmodus
-entsteht ausschließlich durch diese Datei.
+`DEBUG=True`, CORS auf `localhost:5500`. Pflicht sind nur `SECRET_KEY` und
+`DB_NAME`, ohne sie startet Django nicht. Der Produktionsmodus entsteht
+ausschließlich durch diese Datei.
 
 `benjaminblarr.de` muss in `ALLOWED_HOSTS` und den
 `CSRF_TRUSTED_ORIGINS` stehen bleiben, obwohl Coderr dort nicht mehr
