@@ -64,7 +64,7 @@ jobs:
           --health-retries 5
 
     env:
-      # A set DB_NAME switches settings.py from SQLite to PostgreSQL.
+      # settings.py reads the database connection from these variables.
       DB_NAME: coderr
       DB_USER: coderr
       DB_PASSWORD: coderr

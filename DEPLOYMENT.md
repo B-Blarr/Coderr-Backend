@@ -241,8 +241,8 @@ der Kernel bei einer Speicherspitze den größten Prozess beendet, also
 ### 3.7 Pakete
 
 ```bash
-sudo apt install -y nginx postgresql postgresql-contrib python3-venv \
-  python3-dev libpq-dev git certbot python3-certbot-nginx fail2ban
+sudo apt install -y nginx postgresql postgresql-contrib postgresql-16-pgvector \
+  python3-venv python3-dev libpq-dev git certbot python3-certbot-nginx fail2ban
 ```
 
 ### 3.8 Datenbank
@@ -270,6 +270,22 @@ der Nutzer falsch angelegt, es fehlt aber nur dieses Recht.
 
 `CREATEDB` braucht Django, um für Tests eine temporäre Datenbank
 anzulegen.
+
+**pgvector** braucht der Portfolio-Assistent. Die Extension ist nicht
+`trusted`, nur ein Superuser darf sie anlegen. Deshalb legt `postgres` sie
+einmal an, bevor die erste Migration läuft:
+
+```bash
+sudo -u postgres psql -d coderr -c 'CREATE EXTENSION vector'
+sudo -u postgres psql -d template1 -c 'CREATE EXTENSION vector'
+```
+
+Die Migration `assistant_app.0001` findet die Extension dann vor und
+überspringt `CREATE EXTENSION`, `coderr` braucht keine Superuser-Rechte.
+`template1` ist die Vorlage für jede neue Datenbank. Liegt die Extension
+dort, haben auch die Wegwerf-Datenbanken aus 5.5 sie von Anfang an. Ohne
+sie scheitert das Einspielen einer Sicherung als `coderr` an
+`permission denied to create extension "vector"`.
 
 Passwörter erzeugen:
 
@@ -516,8 +532,9 @@ CONTACT_RECIPIENT=<Zieladresse der Formularnachrichten>
 ```
 
 Ohne gesetzte Variablen verhält sich das Projekt wie in der Entwicklung:
-`DEBUG=True`, SQLite, CORS auf `localhost:5500`. Der Produktionsmodus
-entsteht ausschließlich durch diese Datei.
+`DEBUG=True`, CORS auf `localhost:5500`. Pflicht sind nur `SECRET_KEY` und
+`DB_NAME`, ohne sie startet Django nicht. Der Produktionsmodus entsteht
+ausschließlich durch diese Datei.
 
 `benjaminblarr.de` muss in `ALLOWED_HOSTS` und den
 `CSRF_TRUSTED_ORIGINS` stehen bleiben, obwohl Coderr dort nicht mehr
@@ -982,8 +999,13 @@ export PGPASSWORD="$(grep -m1 '^DB_PASSWORD=' .env | cut -d= -f2- | tr -d "\r\"'
 
 ```bash
 createdb coderr_neu
-gunzip -c ~/backups/coderr/<datei>.sql.gz | psql -X -q -v ON_ERROR_STOP=1 -d coderr_neu
+gunzip -c ~/backups/coderr/<datei>.sql.gz | grep -v '^COMMENT ON EXTENSION' \
+  | psql -X -q -v ON_ERROR_STOP=1 -d coderr_neu
 ```
+Das `grep -v` lässt die Zeile `COMMENT ON EXTENSION` weg. Sie darf nur der
+Eigentümer der Extension ausführen, und das ist `postgres`, nicht `coderr`.
+Ohne den Filter bricht das Einspielen an `must be owner of extension vector`
+ab. `restore_probe.sh` filtert genauso.
 
 Bricht das ab: `dropdb coderr_neu`. Die echte Datenbank ist unberührt.
 
@@ -1131,6 +1153,12 @@ gewinnt, nicht der letzte.
 
 **Schema-Rechte ab PostgreSQL 15.** Siehe Abschnitt 3.8.
 
+**pgvector und das Einspielen als `coderr`.** Siehe Abschnitte 3.8 und
+5.5. Vor dem ersten Deploy mit pgvector lokal nachgestellt: Ohne die
+Extension in `template1` scheitert jede Wiederherstellung am
+`CREATE EXTENSION`, mit ihr am `COMMENT ON EXTENSION`. Aufgefallen, bevor
+eine Sicherung gebraucht wurde, nicht danach.
+
 **GitHub-Passwort funktioniert nicht.** Passwort-Anmeldung für
 Git-Operationen ist seit 2021 abgeschaltet. Für private Repos wird ein
 Deploy Key oder ein Personal Access Token benötigt. Bei öffentlichen
@@ -1250,6 +1278,13 @@ Für die Zukunft: Secret Key ab dem ersten Commit in die `.env`.
       `sites-enabled` und das Zertifikat für `benjaminblarr.dev` vom
       Server entfernen. Sonst versucht certbot weiter, ein Zertifikat
       für eine Domain zu erneuern, die es nicht mehr gibt
+
+### Erledigt am 26.09.2026
+
+- [x] `postgresql-16-pgvector` 0.6.0 installiert, ohne Neustart von
+      PostgreSQL. Extension als `postgres` in `coderr` und `template1`
+      angelegt
+
 
 ### Erledigt am 15.09.2026
 

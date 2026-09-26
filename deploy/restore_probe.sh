@@ -64,7 +64,11 @@ createdb "$TEST_DB"
 created=1
 
 started=$SECONDS
-if ! gunzip -c "$backup" | psql -X -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >/dev/null 2>"$errors"; then
+# pg_dump writes COMMENT ON EXTENSION for pgvector, which only the owner of
+# the extension (postgres) may run. The extension itself already exists in
+# the new database, because createdb copies it from template1.
+if ! gunzip -c "$backup" | grep -v '^COMMENT ON EXTENSION' \
+        | psql -X -q -v ON_ERROR_STOP=1 -d "$TEST_DB" >/dev/null 2>"$errors"; then
     echo "--- Restore FAILED ---"
     cat "$errors"
     exit 1
