@@ -221,6 +221,13 @@ if not EMAIL_HOST_USER:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
+# Portfolio assistant
+# Off by default, so a server without the embedding service answers 503
+# instead of failing on every request.
+
+ASSISTANT_ENABLED = env_bool("ASSISTANT_ENABLED")
+
+
 # Embedding service
 # Runs as its own process next to Django, see embedding_service/README.md.
 
