@@ -197,7 +197,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_THROTTLE_RATES': {
-        'contact': '5/hour',
+        'assistant': '20/hour',
+        'assistant_global': '200/day',
     },
 }
 

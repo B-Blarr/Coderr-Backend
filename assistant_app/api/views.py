@@ -19,6 +19,7 @@ from assistant_app.laya_client import (
 from assistant_app.retrieval import search
 
 from .serializers import ChunkResultSerializer, QuestionSerializer
+from .throttling import AssistantGlobalThrottle, AssistantRateThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ class AssistantView(APIView):
 
     permission_classes = [AllowAny]
     authentication_classes = []
+    throttle_classes = [AssistantRateThrottle, AssistantGlobalThrottle]
 
     @extend_schema(exclude=True)
     def post(self, request):
@@ -54,6 +56,16 @@ class AssistantView(APIView):
             return self._unavailable()
         results = ChunkResultSerializer(chunks, many=True).data
         return Response({'results': results})
+
+    def check_throttles(self, request):
+        """Stop at the first throttle that refuses the request.
+
+        DRF asks every throttle, so an address that is already over its
+        own limit would otherwise still use up the global quota.
+        """
+        for throttle in self.get_throttles():
+            if not throttle.allow_request(request, self):
+                self.throttled(request, throttle.wait())
 
     def _reject_attacks(self, question):
         """Raise PermissionDenied when Laya flags the question.
