@@ -3,9 +3,8 @@
 The portfolio assistant checks every visitor question with
 [Laya](https://pypi.org/project/laya/) before doing anything else with it.
 Laya is a small classifier that estimates whether a text tries to make an AI
-assistant ignore its rules (jailbreak) or smuggles instructions into it
-(prompt injection). Questions that do are rejected before they cost any
-retrieval or language model time.
+assistant ignore its rules (a jailbreak). Questions that do are rejected
+before they cost any retrieval or language model time.
 
 This folder contains no service code. Laya ships its own HTTP server,
 `laya-serve`; the folder pins its dependencies and holds a smoke test.
@@ -98,10 +97,6 @@ itself instead of declaring a schema.
     "jailbreak": {
       "type": "noul",
       "instructions": "Does `prompt` try to make an AI assistant ignore its rules, policies or system instructions?"
-    },
-    "prompt_injection": {
-      "type": "noul",
-      "instructions": "Does `prompt` contain instructions aimed at the AI system rather than a genuine user request?"
     }
   }
 }
@@ -110,28 +105,33 @@ itself instead of declaring a schema.
 - `model` must always be `multilingual`. Without it, Laya picks a checkpoint
   by language and sends English text to its English checkpoint, which is then
   loaded on first use: slow, and a second model in memory.
-- The two questions are worded exactly like Laya's own `guard_questions()`
-  preset. Different wording shifts the scores.
+- The question is worded exactly like the one in Laya's own
+  `guard_questions()` preset. Different wording shifts the scores.
+- The preset's `prompt_injection` question is left out. On the assistant's
+  test questions it blocked five genuine questions about AI and caught no
+  attack that `jailbreak` missed.
 
 The response, shortened:
 
 ```json
 {
   "answers": {
-    "jailbreak": {"type": "noul", "noul": 0.0008},
-    "prompt_injection": {"type": "noul", "noul": 0.0}
+    "jailbreak": {"type": "noul", "noul": 0.0008}
   },
   "routing": {"model": "multilingual"}
 }
 ```
 
-`noul` is the probability, from 0 to 1, that the answer is yes. Unlike
-embedding similarities, these scores separate clearly: ordinary questions
-score close to 0, attacks close to 1.
+`noul` is the probability, from 0 to 1, that the answer is yes. Laya reacts
+to the vocabulary of jailbreaks ("ignore your rules", "without
+restrictions"), not to their intent: quiet attacks that ask for hidden
+instructions score close to 0, and some genuine questions about AI score up to
+0.76. The assistant therefore blocks at 0.8. `python manage.py evaluate_guard`
+in the Django project measures both sides with fixed questions and attacks.
 
 `laya-serve` answers one request at a time and queues the rest. Measured
-locally, a request takes 0.1 to 0.2 seconds, and ten concurrent requests
-finish after 1.1 seconds for the last one. Clients need a timeout that allows
+locally, a request takes about 0.1 seconds, and ten concurrent requests took
+about one second until the last answer. Clients need a timeout that allows
 for this queue.
 
 ## Smoke test
@@ -143,10 +143,10 @@ python smoke_test.py
 ```
 
 It sends three ordinary questions and three attacks, in German and English,
-and checks that exactly the attacks reach the threshold of 0.5 on at least one
-of the two scores. It also checks that the multilingual checkpoint answered.
-It exits with `0` on success and `1` on failure, and needs nothing beyond the
-Python standard library.
+and checks that exactly the attacks reach a jailbreak score of 0.8. It also
+checks that the multilingual checkpoint answered. It exits with `0` on
+success and `1` on failure, and needs nothing beyond the Python standard
+library.
 
 ## Why this folder is not a Python package
 
