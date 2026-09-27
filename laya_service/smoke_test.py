@@ -72,7 +72,7 @@ def evaluate(prompt, is_attack):
 
 def main():
     """Check all prompts and return 1 if one is judged wrongly."""
-    print("score time prompt")
+    print("score time    prompt")
     cases = [(p, False) for p in ORDINARY] + [(p, True) for p in ATTACKS]
     failures = [f for f in (evaluate(p, a) for p, a in cases) if f]
     for failure in failures:

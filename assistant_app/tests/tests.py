@@ -214,7 +214,6 @@ class LayaClientTests(SimpleTestCase):
             'score below 0': httpx.Response(200, json=laya_answer(-0.1)),
             'score is NaN': httpx.Response(
                 200, text='{"answers": {"jailbreak": {"noul": NaN}}}'),
-
         }
         for label, response in cases.items():
             with self.subTest(label):
