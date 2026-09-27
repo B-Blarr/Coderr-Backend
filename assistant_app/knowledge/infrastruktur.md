@@ -52,7 +52,7 @@ die noch nie zurückgespielt wurde, ist keine Sicherung, sondern eine Annahme.
 
 ## Wie neue Versionen live gehen
 
-Das Ausrollen passiert nicht von Hand, sondern über eine Pipeline in GitHub
+Benjamin deployt nicht von Hand, sondern über eine CI/CD-Pipeline in GitHub
 Actions. Bei jeder Änderung laufen zuerst die Prüfungen: Codeformatierung,
 statische Analyse, automatische Tests, ein vollständiger Build. Erst wenn alles
 davon durchläuft und die Änderung im Hauptzweig landet, wird ausgerollt.
