@@ -80,11 +80,12 @@ coderr_backend/
 ├── base_app/           # Aggregated platform statistics (base-info)
 │   └── api/            # views.py, urls.py
 ├── contact_app/        # Contact form of the portfolio site
-├── assistant_app/      # Retrieval for the portfolio assistant
+├── assistant_app/      # Input filter and retrieval for the portfolio assistant
 │   ├── api/            # serializers.py, views.py, urls.py
 │   ├── knowledge/      # Knowledge base, one Markdown file per topic
-│   └── management/     # build_index, evaluate_retrieval
+│   └── management/     # build_index, evaluate_retrieval, evaluate_guard
 ├── embedding_service/  # Standalone FastAPI service that embeds texts
+├── laya_service/       # Setup and smoke test for the Laya input filter
 ├── deploy/             # Deployment script and Nginx configuration
 ├── compose.yml         # Local PostgreSQL with pgvector
 ├── manage.py
@@ -344,21 +345,35 @@ site: visitors ask questions about me and my projects, and the answer comes
 from a knowledge base I maintain instead of being made up. The feature is
 under construction and not live yet.
 
-The current stage covers retrieval only, without a language model:
+The current stage covers the input filter and retrieval, without a language
+model yet:
 
 1. `assistant_app/knowledge/*.md` holds the knowledge base, cut into sections
    at every `##` heading.
 2. `python manage.py build_index` embeds every section through the
    [embedding service](embedding_service/README.md) and stores the vectors in
    PostgreSQL with pgvector.
-3. `POST /api/assistant/` with `{"question": "..."}` returns the five closest
-   sections with their cosine similarity.
+3. `POST /api/assistant/` with `{"question": "..."}` first sends the question
+   to [Laya](laya_service/README.md), a small classifier for jailbreak
+   attempts, and answers `403` if its score reaches `LAYA_THRESHOLD` (0.8).
+   Otherwise it returns the five closest sections with their cosine
+   similarity.
 4. `python manage.py evaluate_retrieval` checks a fixed list of questions, in
    German and English, against the sections they should find.
+5. `python manage.py evaluate_guard` sends the same questions and a list of
+   attacks through Laya and reports false alarms and missed attacks.
 
-The endpoint answers `503` unless `ASSISTANT_ENABLED=True` is set, so a server
-without the embedding service stays safe. Locally the embedding service runs
-in a second terminal, see its README.
+Laya is a cheap pre-filter against obvious attacks, not a security boundary.
+Measured with `evaluate_guard`, it blocks none of the 49 questions on topic
+and catches 8 of 15 attacks; quiet attacks without typical jailbreak wording
+get through. The threshold is a trade-off: a lower one also blocked genuine
+questions about AI, which is worse for a portfolio than a missed attack,
+because the knowledge base holds only public content.
+
+The endpoint fails closed. It answers `503` when Laya or the embedding service
+does not respond, and unless `ASSISTANT_ENABLED=True` is set. Only the Laya
+scores of a rejected question are logged, never its text. Locally Laya and the
+embedding service each run in their own terminal, see their READMEs.
 
 ---
 

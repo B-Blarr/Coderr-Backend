@@ -40,6 +40,20 @@ def env_list(name, default=""):
             if item.strip()]
 
 
+def env_probability(name, default):
+    """Read a number greater than 0 and at most 1 from the environment."""
+    raw = os.getenv(name, default)
+    try:
+        value = float(raw)
+    except ValueError:
+        raise ValueError(f"{name} must be a number, got {raw!r}.") from None
+    if not 0 < value <= 1:
+        raise ValueError(
+            f"{name} must be greater than 0 and at most 1, got {raw!r}."
+        )
+    return value
+
+
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY is not set in the environment variables.")
@@ -232,6 +246,17 @@ ASSISTANT_ENABLED = env_bool("ASSISTANT_ENABLED")
 EMBEDDING_SERVICE_URL = os.getenv(
     "EMBEDDING_SERVICE_URL", "http://127.0.0.1:8002"
 )
+
+
+# Laya input filter
+# Runs as its own process next to Django, see laya_service/README.md.
+# A question is rejected when its jailbreak score reaches the threshold.
+# 0.8 was measured with evaluate_guard: no genuine question reached it.
+# A threshold above 1 would let every attack through, so env_probability
+# stops the startup instead.
+
+LAYA_SERVICE_URL = os.getenv("LAYA_SERVICE_URL", "http://127.0.0.1:8001")
+LAYA_THRESHOLD = env_probability("LAYA_THRESHOLD", "0.8")
 
 
 SPECTACULAR_SETTINGS = {

@@ -5,11 +5,17 @@ import logging
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from assistant_app.embedding_client import EmbeddingServiceError
+from assistant_app.laya_client import (
+    LayaServiceError,
+    is_attack,
+    score_question,
+)
 from assistant_app.retrieval import search
 
 from .serializers import ChunkResultSerializer, QuestionSerializer
@@ -20,8 +26,9 @@ logger = logging.getLogger(__name__)
 class AssistantView(APIView):
     """Returns the knowledge sections that best match a question.
 
-    No language model is involved yet: the response shows exactly what
-    retrieval found, so its quality can be measured on its own.
+    Laya checks every question first. No language model is involved yet:
+    the response shows exactly what retrieval found, so its quality can
+    be measured on its own.
     """
 
     permission_classes = [AllowAny]
@@ -29,7 +36,7 @@ class AssistantView(APIView):
 
     @extend_schema(exclude=True)
     def post(self, request):
-        """Validate the question and return the closest sections.
+        """Check the question and return the closest sections.
 
         Excluded from the generated API schema: this endpoint belongs to
         the portfolio and is not part of the Coderr API.
@@ -38,13 +45,27 @@ class AssistantView(APIView):
             return self._unavailable()
         serializer = QuestionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        question = serializer.validated_data['question']
         try:
-            chunks = search(serializer.validated_data['question'])
-        except EmbeddingServiceError as error:
+            self._reject_attacks(question)
+            chunks = search(question)
+        except (LayaServiceError, EmbeddingServiceError) as error:
             logger.error("Assistent: %s", error)
             return self._unavailable()
         results = ChunkResultSerializer(chunks, many=True).data
         return Response({'results': results})
+
+    def _reject_attacks(self, question):
+        """Raise PermissionDenied when Laya flags the question.
+
+        Only the scores are logged, never the question: visitors' texts
+        are not stored anywhere.
+        """
+        scores = score_question(question)
+        if is_attack(scores):
+            logger.warning("Assistent: Frage abgelehnt, Werte %s", scores)
+            raise PermissionDenied(
+                "Diese Frage kann der Assistent nicht beantworten.")
 
     def _unavailable(self):
         """Answer 503 when the assistant is switched off or broken."""
