@@ -85,6 +85,7 @@ coderr_backend/
 │   ├── knowledge/      # Knowledge base, one Markdown file per topic
 │   └── management/     # build_index, evaluate_retrieval
 ├── embedding_service/  # Standalone FastAPI service that embeds texts
+├── laya_service/       # Setup and smoke test for the Laya input filter
 ├── deploy/             # Deployment script and Nginx configuration
 ├── compose.yml         # Local PostgreSQL with pgvector
 ├── manage.py
