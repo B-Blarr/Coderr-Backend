@@ -250,12 +250,12 @@ EMBEDDING_SERVICE_URL = os.getenv(
 
 # Laya input filter
 # Runs as its own process next to Django, see laya_service/README.md.
-# A question is rejected when either Laya score reaches the threshold.
-# A threshold above 1 would let every attack through, so env_probability
+# A question is rejected when its jailbreak score reaches the threshold.
+# 0.8 was measured with evaluate_guard: no genuine question reached it.
 # stops the startup instead.
 
 LAYA_SERVICE_URL = os.getenv("LAYA_SERVICE_URL", "http://127.0.0.1:8001")
-LAYA_THRESHOLD = env_probability("LAYA_THRESHOLD", "0.5")
+LAYA_THRESHOLD = env_probability("LAYA_THRESHOLD", "0.8")
 
 
 SPECTACULAR_SETTINGS = {

@@ -170,12 +170,9 @@ class EmbeddingClientTests(SimpleTestCase):
             embed_query('Frage')
 
 
-def laya_answer(jailbreak, prompt_injection):
-    """Return a Laya response body with the two given scores."""
-    return {'answers': {
-        'jailbreak': {'type': 'noul', 'noul': jailbreak},
-        'prompt_injection': {'type': 'noul', 'noul': prompt_injection},
-    }}
+def laya_answer(jailbreak):
+    """Return a Laya response body with the given jailbreak score."""
+    return {'answers': {'jailbreak': {'type': 'noul', 'noul': jailbreak}}}
 
 
 @patch('assistant_app.laya_client.httpx.post')
@@ -184,9 +181,9 @@ class LayaClientTests(SimpleTestCase):
 
     def test_question_is_sent_as_prompt(self, mock_post):
         mock_post.return_value = httpx.Response(
-            200, json=laya_answer(0.98, 0.1))
+            200, json=laya_answer(0.98))
         scores = score_question('Frage')
-        self.assertEqual(scores, {'jailbreak': 0.98, 'prompt_injection': 0.1})
+        self.assertEqual(scores, {'jailbreak': 0.98})
         body = mock_post.call_args.kwargs['json']
         self.assertEqual(body['model'], 'multilingual')
         self.assertEqual(body['state'], {'prompt': 'Frage'})
@@ -209,15 +206,15 @@ class LayaClientTests(SimpleTestCase):
         cases = {
             'no JSON': httpx.Response(200, text='oops'),
             'no answers': httpx.Response(200, json={}),
-            'one score missing': httpx.Response(
-                200, json={'answers': {'jailbreak': {'noul': 0.0}}}),
-            'score is null': httpx.Response(200, json=laya_answer(None, 0.0)),
-            'score is text': httpx.Response(200, json=laya_answer('x', 0.0)),
-            'score above 1': httpx.Response(200, json=laya_answer(1.5, 0.0)),
-            'score below 0': httpx.Response(200, json=laya_answer(-0.1, 0.0)),
-            'score is NaN': httpx.Response(200, text=(
-                '{"answers": {"jailbreak": {"noul": NaN},'
-                ' "prompt_injection": {"noul": 0.0}}}')),
+            'score missing': httpx.Response(
+                200, json={'answers': {'other': {'noul': 0.0}}}),
+            'score is null': httpx.Response(200, json=laya_answer(None)),
+            'score is text': httpx.Response(200, json=laya_answer('x')),
+            'score above 1': httpx.Response(200, json=laya_answer(1.5)),
+            'score below 0': httpx.Response(200, json=laya_answer(-0.1)),
+            'score is NaN': httpx.Response(
+                200, text='{"answers": {"jailbreak": {"noul": NaN}}}'),
+
         }
         for label, response in cases.items():
             with self.subTest(label):
@@ -226,23 +223,15 @@ class LayaClientTests(SimpleTestCase):
                     score_question('Frage')
 
 
-@override_settings(LAYA_THRESHOLD=0.5)
+@override_settings(LAYA_THRESHOLD=0.8)
 class IsAttackTests(SimpleTestCase):
     """Test the threshold decision without any service."""
 
-    def test_either_score_at_the_threshold_blocks(self):
-        cases = [
-            ((0.0, 0.0), False),
-            ((0.49, 0.49), False),
-            ((0.5, 0.0), True),
-            ((0.0, 0.5), True),
-            ((0.98, 0.1), True),
-        ]
-        for (jailbreak, injection), expected in cases:
-            with self.subTest(jailbreak=jailbreak, injection=injection):
-                scores = {'jailbreak': jailbreak,
-                          'prompt_injection': injection}
-                self.assertIs(is_attack(scores), expected)
+    def test_score_at_the_threshold_blocks(self):
+        cases = [(0.0, False), (0.79, False), (0.8, True), (0.98, True)]
+        for score, expected in cases:
+            with self.subTest(score=score):
+                self.assertIs(is_attack({'jailbreak': score}), expected)
 
 
 class EnvProbabilityTests(SimpleTestCase):
