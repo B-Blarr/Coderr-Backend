@@ -14,6 +14,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework.throttling import SimpleRateThrottle
 
 from assistant_app.embedding_client import (
     EmbeddingServiceError,
@@ -495,3 +496,52 @@ class EvaluateGuardTests(SimpleTestCase):
             with self.subTest(attack=attack):
                 self.assertIsInstance(attack, str)
                 self.assertTrue(attack.strip())
+
+
+def throttle_rates(per_address, overall):
+    """Patch the throttle rates, which DRF reads once at import time."""
+    return patch.object(SimpleRateThrottle, 'THROTTLE_RATES', {
+        'assistant': per_address, 'assistant_global': overall})
+
+
+@override_settings(ASSISTANT_ENABLED=False)
+class AssistantThrottleTests(APITestCase):
+    """Test both throttles; the switched-off view answers 503 when allowed."""
+
+    def ask(self, address=None):
+        extra = {'HTTP_X_REAL_IP': address} if address else {}
+        return self.client.post(
+            reverse('assistant'), {'question': 'Frage'}, format='json',
+            **extra)
+
+    def test_limits_questions_per_address(self):
+        with throttle_rates('2/hour', '100/day'):
+            codes = [self.ask('1.1.1.1').status_code for _ in range(3)]
+            other = self.ask('2.2.2.2')
+        self.assertEqual(codes, [503, 503, 429])
+        self.assertEqual(other.status_code, 503)
+
+    def test_without_header_uses_remote_address(self):
+        with throttle_rates('1/hour', '100/day'):
+            first, second = self.ask(), self.ask()
+        self.assertEqual((first.status_code, second.status_code), (503, 429))
+
+    def test_limits_all_addresses_together(self):
+        with throttle_rates('10/hour', '2/day'):
+            codes = [self.ask(f"1.1.1.{i}").status_code for i in range(3)]
+        self.assertEqual(codes, [503, 503, 429])
+
+    def test_refused_address_does_not_use_global_quota(self):
+        with throttle_rates('1/hour', '3/day'):
+            for _ in range(5):
+                self.ask('1.1.1.1')
+            response = self.ask('2.2.2.2')
+        self.assertEqual(response.status_code, 503)
+
+    def test_throttled_answer_says_when_to_retry(self):
+        with throttle_rates('1/hour', '100/day'):
+            self.ask('1.1.1.1')
+            response = self.ask('1.1.1.1')
+        self.assertEqual(
+            response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertIn('Retry-After', response.headers)
