@@ -1,6 +1,7 @@
-"""Tests for the assistant app: parsing, embedding client, index, API."""
+"""Tests for the assistant app: parsing, clients, index, API."""
 
 import json
+import os
 import tempfile
 from io import StringIO
 from pathlib import Path
@@ -20,10 +21,16 @@ from assistant_app.embedding_client import (
     embed_query,
 )
 from assistant_app.knowledge_base import KnowledgeBaseError, read_sections
+from assistant_app.laya_client import (
+    LayaServiceError,
+    is_attack,
+    score_question,
+)
 from assistant_app.management.commands.evaluate_retrieval import (
     DEFAULT_QUESTIONS,
 )
 from assistant_app.models import KnowledgeChunk
+from core.settings import env_probability
 
 KNOWLEDGE_DIR = Path(__file__).resolve().parent.parent / 'knowledge'
 
@@ -160,6 +167,102 @@ class EmbeddingClientTests(SimpleTestCase):
         mock_post.return_value = httpx.Response(422, text='too long')
         with self.assertRaisesMessage(EmbeddingServiceError, '422: too long'):
             embed_query('Frage')
+
+
+def laya_answer(jailbreak, prompt_injection):
+    """Return a Laya response body with the two given scores."""
+    return {'answers': {
+        'jailbreak': {'type': 'noul', 'noul': jailbreak},
+        'prompt_injection': {'type': 'noul', 'noul': prompt_injection},
+    }}
+
+
+@patch('assistant_app.laya_client.httpx.post')
+class LayaClientTests(SimpleTestCase):
+    """Test the HTTP client with the Laya service mocked."""
+
+    def test_question_is_sent_as_prompt(self, mock_post):
+        mock_post.return_value = httpx.Response(
+            200, json=laya_answer(0.98, 0.1))
+        scores = score_question('Frage')
+        self.assertEqual(scores, {'jailbreak': 0.98, 'prompt_injection': 0.1})
+        body = mock_post.call_args.kwargs['json']
+        self.assertEqual(body['model'], 'multilingual')
+        self.assertEqual(body['state'], {'prompt': 'Frage'})
+        self.assertEqual(set(body['questions']), set(scores))
+
+    def test_unreachable_or_slow_service_raises(self, mock_post):
+        for error in (httpx.ConnectError('refused'), httpx.ReadTimeout('')):
+            with self.subTest(type(error).__name__):
+                mock_post.side_effect = error
+                with self.assertRaisesMessage(
+                        LayaServiceError, type(error).__name__):
+                    score_question('Frage')
+
+    def test_error_status_raises_with_body(self, mock_post):
+        mock_post.return_value = httpx.Response(422, text='bad question')
+        with self.assertRaisesMessage(LayaServiceError, '422: bad question'):
+            score_question('Frage')
+
+    def test_unusable_answers_raise(self, mock_post):
+        cases = {
+            'no JSON': httpx.Response(200, text='oops'),
+            'no answers': httpx.Response(200, json={}),
+            'one score missing': httpx.Response(
+                200, json={'answers': {'jailbreak': {'noul': 0.0}}}),
+            'score is null': httpx.Response(200, json=laya_answer(None, 0.0)),
+            'score is text': httpx.Response(200, json=laya_answer('x', 0.0)),
+            'score above 1': httpx.Response(200, json=laya_answer(1.5, 0.0)),
+            'score below 0': httpx.Response(200, json=laya_answer(-0.1, 0.0)),
+            'score is NaN': httpx.Response(200, text=(
+                '{"answers": {"jailbreak": {"noul": NaN},'
+                ' "prompt_injection": {"noul": 0.0}}}')),
+        }
+        for label, response in cases.items():
+            with self.subTest(label):
+                mock_post.return_value = response
+                with self.assertRaises(LayaServiceError):
+                    score_question('Frage')
+
+
+@override_settings(LAYA_THRESHOLD=0.5)
+class IsAttackTests(SimpleTestCase):
+    """Test the threshold decision without any service."""
+
+    def test_either_score_at_the_threshold_blocks(self):
+        cases = [
+            ((0.0, 0.0), False),
+            ((0.49, 0.49), False),
+            ((0.5, 0.0), True),
+            ((0.0, 0.5), True),
+            ((0.98, 0.1), True),
+        ]
+        for (jailbreak, injection), expected in cases:
+            with self.subTest(jailbreak=jailbreak, injection=injection):
+                scores = {'jailbreak': jailbreak,
+                          'prompt_injection': injection}
+                self.assertIs(is_attack(scores), expected)
+
+
+class EnvProbabilityTests(SimpleTestCase):
+    """Test the helper that reads LAYA_THRESHOLD at startup."""
+
+    def read(self, raw):
+        with patch.dict(os.environ, {'TEST_PROBABILITY': raw}):
+            return env_probability('TEST_PROBABILITY', '0.5')
+
+    def test_reads_values_up_to_1(self):
+        self.assertEqual(self.read('0.7'), 0.7)
+        self.assertEqual(self.read('1'), 1.0)
+
+    def test_uses_default_when_unset(self):
+        self.assertEqual(env_probability('TEST_PROBABILITY_UNSET', '0.5'), 0.5)
+
+    def test_rejects_invalid_values(self):
+        for raw in ('0', '-0.1', '1.5', '5', 'nan', 'inf', 'abc', ''):
+            with self.subTest(raw=raw):
+                with self.assertRaisesMessage(ValueError, 'TEST_PROBABILITY'):
+                    self.read(raw)
 
 
 @patch('assistant_app.management.commands.build_index.embed_passages')
