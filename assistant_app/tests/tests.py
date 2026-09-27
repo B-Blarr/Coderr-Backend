@@ -26,6 +26,7 @@ from assistant_app.laya_client import (
     is_attack,
     score_question,
 )
+from assistant_app.management.commands.evaluate_guard import DEFAULT_ATTACKS
 from assistant_app.management.commands.evaluate_retrieval import (
     DEFAULT_QUESTIONS,
 )
@@ -420,3 +421,65 @@ class EvaluateRetrievalTests(TestCase):
         ]
         with self.assertRaisesMessage(CommandError, 'down'):
             self.evaluate(cases)
+
+
+@override_settings(LAYA_THRESHOLD=0.8)
+@patch('assistant_app.management.commands.evaluate_guard.score_question')
+class EvaluateGuardTests(SimpleTestCase):
+    """Test the filter report with the Laya service mocked."""
+
+    def setUp(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        self.questions = Path(temp_dir.name) / 'questions.json'
+        self.attacks = Path(temp_dir.name) / 'attacks.json'
+
+    def evaluate(self, questions, attacks):
+        self.questions.write_text(json.dumps(questions), encoding='utf-8')
+        self.attacks.write_text(json.dumps(attacks), encoding='utf-8')
+        output = StringIO()
+        call_command('evaluate_guard', questions=self.questions,
+                     attacks=self.attacks, stdout=output)
+        return output.getvalue()
+
+    def test_reports_all_four_outcomes(self, mock_score):
+        scores = {'Frage': 0.1, 'KI?': 0.85, 'Laut': 0.99, 'Leise': 0.02}
+        mock_score.side_effect = lambda text: {'jailbreak': scores[text]}
+        output = self.evaluate([
+            {'question': 'Frage', 'expected': ['Deploy']},
+            {'question': 'KI?', 'expected': ['KI']},
+            {'question': 'Lasagne?', 'expected': []},
+        ], ['Laut', 'Leise'])
+        self.assertIn('PASS  0.100  Frage', output)
+        self.assertIn('BLOCK 0.850  KI?', output)
+        self.assertIn('CATCH 0.990  Laut', output)
+        self.assertIn('MISS  0.020  Leise', output)
+        self.assertNotIn('Lasagne?', output)
+        self.assertIn('Attacks caught:    1 of 2', output)
+        self.assertIn('Questions blocked: 1 of 2', output)
+        self.assertIn('Highest score on topic: 0.850 (threshold 0.8)', output)
+
+    def test_needs_questions_on_topic_and_attacks(self, mock_score):
+        cases = {
+            'no attacks': ([{'question': 'Frage', 'expected': ['A']}], []),
+            'only off topic': ([{'question': 'Frage', 'expected': []}], ['X']),
+        }
+        for label, (questions, attacks) in cases.items():
+            with self.subTest(label):
+                with self.assertRaisesMessage(CommandError, 'are needed'):
+                    self.evaluate(questions, attacks)
+        mock_score.assert_not_called()
+
+    def test_service_failure_is_reported(self, mock_score):
+        mock_score.side_effect = LayaServiceError('down')
+        questions = [{'question': 'Frage', 'expected': ['A']}]
+        with self.assertRaisesMessage(CommandError, 'down'):
+            self.evaluate(questions, ['X'])
+
+    def test_shipped_attacks_are_texts(self, mock_score):
+        attacks = json.loads(DEFAULT_ATTACKS.read_text(encoding='utf-8'))
+        self.assertGreater(len(attacks), 0)
+        for attack in attacks:
+            with self.subTest(attack=attack):
+                self.assertIsInstance(attack, str)
+                self.assertTrue(attack.strip())
