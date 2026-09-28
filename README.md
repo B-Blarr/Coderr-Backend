@@ -350,28 +350,35 @@ site: visitors ask questions about me and my projects, and the answer comes
 from a knowledge base I maintain instead of being made up. The feature is
 under construction and not live yet.
 
-The current stage covers the safeguards and retrieval, without a language
-model yet:
+The pipeline, from the knowledge base to the answer:
 
 1. `assistant_app/knowledge/*.md` holds the knowledge base, cut into sections
    at every `##` heading.
 2. `python manage.py build_index` embeds every section through the
    [embedding service](embedding_service/README.md) and stores the vectors in
    PostgreSQL with pgvector.
-3. `POST /api/assistant/` with `{"question": "..."}` answers a pure greeting
+3. `POST /api/assistant/` with `{"question": "...", "lang": "de"}` (`lang` is
+   the language of the page, `de` or `en`) answers a pure greeting
    such as "Hallo" right away with `{"kind": "greeting"}`. Every other
    question goes to [Laya](laya_service/README.md), a small classifier for
    jailbreak attempts, which answers `403` if its score reaches
    `LAYA_THRESHOLD` (0.8). Then the five closest sections are searched, and
    only those with a cosine similarity of at least
-   `ASSISTANT_MIN_SIMILARITY` (0.76) are kept: `{"kind": "sections",
-   "results": [...]}`, or `{"kind": "off_topic", "results": []}` when none is
-   left.
+   `ASSISTANT_MIN_SIMILARITY` (0.76) are kept. Without any, the answer is
+   `{"kind": "off_topic"}` and no language model is called. Otherwise Claude
+   writes the answer from these sections in the language of the page:
+   `{"kind": "answer", "answer": "...", "answered": true, "sources": [...]}`.
+   `answered` is false when the sections do not cover the question, so the
+   page can point to the contact form.
 4. `python manage.py evaluate_retrieval` checks a fixed list of questions, in
    German and English, against the sections they should find, and counts the
    questions on and off topic below the similarity threshold.
 5. `python manage.py evaluate_guard` sends the same questions and a list of
    attacks through Laya and reports false alarms and missed attacks.
+6. `python manage.py evaluate_answers` sends 33 fixed questions (on topic,
+   off topic and attacks) through search and Claude, once per model profile,
+   and prints every answer with its tokens, cost and time. Without `--run` it
+   only shows a cost estimate, because every run costs real money.
 
 Laya is a cheap pre-filter against obvious attacks, not a security boundary.
 Measured with `evaluate_guard`, it blocks none of the 49 questions on topic
@@ -390,11 +397,22 @@ The similarity threshold is a coarse filter as well. It stops 11 of 24
 questions off topic and none of the 49 on topic, but only general knowledge
 questions score that low. Realistic off-topic requests such as coding help
 score higher than many genuine questions, so they are left to the language
-model's instructions in the next stage.
+model's instructions.
 
-The endpoint fails closed. It answers `503` when Laya or the embedding service
-does not respond, and unless `ASSISTANT_ENABLED=True` is set. Only the Laya
-scores of a rejected question are logged, never its text. Locally Laya and the
+The model was chosen by measurement, not by name. Claude Haiku 4.5, Claude
+Sonnet 5 and Sonnet 5 with thinking all resisted every one of the 14 attacks
+in `evaluate_answers`, including the quiet ones Laya lets through; Haiku cost
+a third and answered twice as fast. Three more rounds on Haiku fixed what the
+answers showed: the answer language now comes from the page instead of being
+guessed by the model, the prompt forbids praise that the sources do not
+contain and promises on my behalf, and `temperature` 0 stopped
+answers from varying between runs and mixing up details. The profile is set
+with `ASSISTANT_LLM_PROFILE` (default `haiku`).
+
+The endpoint fails closed. It answers `503` when Laya, the embedding service
+or Claude does not respond, and unless `ASSISTANT_ENABLED=True` is set. Only
+the Laya scores and the token counts of a request are logged, never its
+text; the question itself is sent to Anthropic to be answered. Locally Laya and the
 embedding service each run in their own terminal, see their READMEs.
 
 ---
