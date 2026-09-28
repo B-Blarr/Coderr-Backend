@@ -15,9 +15,10 @@ MAX_RETRIES = 1
 MAX_TOKENS = 2048
 LANGUAGES = {'de': 'German', 'en': 'English'}
 
-# Model and thinking per profile; evaluate_answers compares them.
+# Model and thinking per profile; evaluate_answers compares them. Only
+# Haiku takes a temperature: Sonnet 5 rejects the parameter with a 400.
 PROFILES = {
-    'haiku': {'model': 'claude-haiku-4-5'},
+    'haiku': {'model': 'claude-haiku-4-5', 'temperature': 0},
     'sonnet': {'model': 'claude-sonnet-5', 'thinking': {'type': 'disabled'}},
     'sonnet-thinking': {
         'model': 'claude-sonnet-5',

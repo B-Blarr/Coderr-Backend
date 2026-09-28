@@ -156,6 +156,7 @@ class LlmClientTests(SimpleTestCase):
         answer_question('Wie <b>?', ranked('A', 'B'))
         kwargs = self.create(mock_client).call_args.kwargs
         self.assertEqual(kwargs['model'], 'claude-haiku-4-5')
+        self.assertEqual(kwargs['temperature'], 0)
         self.assertNotIn('thinking', kwargs)
         self.assertEqual(kwargs['output_config'], {'format': ANSWER_FORMAT})
         self.assertEqual(kwargs['system'], SYSTEM_PROMPT)
@@ -178,6 +179,7 @@ class LlmClientTests(SimpleTestCase):
         self.assertEqual(kwargs['thinking'], {'type': 'adaptive'})
         self.assertEqual(kwargs['output_config'],
                          {'effort': 'low', 'format': ANSWER_FORMAT})
+        self.assertNotIn('temperature', kwargs)
 
     def test_returns_answer_with_valid_sources_only(self, mock_client):
         data = {'answer': 'Ja.', 'answered': True, 'sources': [2, 0, 5, 2]}
