@@ -2,10 +2,11 @@
 
 import json
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import create_autospec, patch
 
 import anthropic
 import httpx
+from anthropic.resources.messages import Messages
 from django.test import SimpleTestCase, override_settings
 
 from assistant_app.embedding_client import (
@@ -144,19 +145,28 @@ ANSWER = {'answer': ' Mit Django. ', 'answered': True, 'sources': [1]}
 
 
 @override_settings(ANTHROPIC_API_KEY='test-key', ASSISTANT_LLM_PROFILE='haiku')
-@patch('assistant_app.llm_client._client')
 class LlmClientTests(SimpleTestCase):
     """Test the Claude client with the SDK mocked."""
 
-    def create(self, mock_client):
-        return mock_client.return_value.messages.create
+    def setUp(self):
+        """Mock the client with the signature of the installed SDK.
 
-    def test_sends_profile_prompt_and_format(self, mock_client):
-        self.create(mock_client).return_value = claude_response(ANSWER)
+        A plain mock accepts any argument, so a parameter the SDK no longer
+        knows would only fail against the real API.
+        """
+        messages = create_autospec(Messages, instance=True)
+        client = patch('assistant_app.llm_client._client')
+        self.mock_client = client.start()
+        self.addCleanup(client.stop)
+        self.mock_client.return_value.messages = messages
+        self.create = messages.create
+
+    def test_sends_profile_prompt_and_format(self):
+        self.create.return_value = claude_response(ANSWER)
         answer_question('Wie <b>?', ranked('A', 'B'))
-        kwargs = self.create(mock_client).call_args.kwargs
+        kwargs = self.create.call_args.kwargs
         self.assertEqual(kwargs['model'], 'claude-haiku-4-5')
-        self.assertEqual(kwargs['temperature'], 0)
+        self.assertEqual(kwargs['extra_body'], {'temperature': 0})
         self.assertNotIn('thinking', kwargs)
         self.assertEqual(kwargs['output_config'], {'format': ANSWER_FORMAT})
         self.assertEqual(kwargs['system'], SYSTEM_PROMPT)
@@ -165,36 +175,36 @@ class LlmClientTests(SimpleTestCase):
         self.assertIn('Wie &lt;b&gt;?', prompt)
         self.assertTrue(prompt.endswith('<language>German</language>'))
 
-    def test_english_page_asks_for_english(self, mock_client):
-        self.create(mock_client).return_value = claude_response(ANSWER)
+    def test_english_page_asks_for_english(self):
+        self.create.return_value = claude_response(ANSWER)
         answer_question('Frage', ranked('A'), lang='en')
-        prompt = self.create(mock_client).call_args.kwargs['messages'][0]
+        prompt = self.create.call_args.kwargs['messages'][0]
         self.assertTrue(
             prompt['content'].endswith('<language>English</language>'))
 
-    def test_thinking_profile_keeps_effort_and_format(self, mock_client):
-        self.create(mock_client).return_value = claude_response(ANSWER)
+    def test_thinking_profile_keeps_effort_and_format(self):
+        self.create.return_value = claude_response(ANSWER)
         answer_question('Frage', ranked('A'), profile='sonnet-thinking')
-        kwargs = self.create(mock_client).call_args.kwargs
+        kwargs = self.create.call_args.kwargs
         self.assertEqual(kwargs['thinking'], {'type': 'adaptive'})
         self.assertEqual(kwargs['output_config'],
                          {'effort': 'low', 'format': ANSWER_FORMAT})
-        self.assertNotIn('temperature', kwargs)
+        self.assertNotIn('extra_body', kwargs)
 
-    def test_returns_answer_with_valid_sources_only(self, mock_client):
+    def test_returns_answer_with_valid_sources_only(self):
         data = {'answer': 'Ja.', 'answered': True, 'sources': [2, 0, 5, 2]}
-        self.create(mock_client).return_value = claude_response(data)
+        self.create.return_value = claude_response(data)
         result = answer_question('Frage', ranked('A', 'B'))
         self.assertEqual(result, {
             'answer': 'Ja.', 'answered': True, 'sources': [2],
             'usage': {'input_tokens': 100, 'output_tokens': 20}})
 
-    def test_refusal_returns_none(self, mock_client):
-        self.create(mock_client).return_value = claude_response(
+    def test_refusal_returns_none(self):
+        self.create.return_value = claude_response(
             '', stop_reason='refusal')
         self.assertIsNone(answer_question('Frage', ranked('A')))
 
-    def test_unusable_answers_raise(self, mock_client):
+    def test_unusable_answers_raise(self):
         cases = {
             'cut off': claude_response(ANSWER, stop_reason='max_tokens'),
             'no JSON': claude_response('oops'),
@@ -204,23 +214,23 @@ class LlmClientTests(SimpleTestCase):
         }
         for label, response in cases.items():
             with self.subTest(label):
-                self.create(mock_client).return_value = response
+                self.create.return_value = response
                 with self.assertRaises(LlmServiceError):
                     answer_question('Frage', ranked('A'))
 
-    def test_sdk_errors_raise(self, mock_client):
-        self.create(mock_client).side_effect = anthropic.AnthropicError('x')
+    def test_sdk_errors_raise(self):
+        self.create.side_effect = anthropic.AnthropicError('x')
         with self.assertRaisesMessage(LlmServiceError, 'not reachable'):
             answer_question('Frage', ranked('A'))
 
     @override_settings(ANTHROPIC_API_KEY='')
-    def test_missing_key_raises_before_any_request(self, mock_client):
+    def test_missing_key_raises_before_any_request(self):
         with self.assertRaisesMessage(LlmServiceError, 'ANTHROPIC_API_KEY'):
             answer_question('Frage', ranked('A'))
-        mock_client.assert_not_called()
+        self.mock_client.assert_not_called()
 
-    def test_logs_usage_but_not_the_question(self, mock_client):
-        self.create(mock_client).return_value = claude_response(ANSWER)
+    def test_logs_usage_but_not_the_question(self):
+        self.create.return_value = claude_response(ANSWER)
         with self.assertLogs('assistant_app.llm_client', 'INFO') as logs:
             answer_question('Geheime Frage', ranked('A'))
         self.assertIn('100 Tokens rein, 20 raus, Anfrage req_1',
