@@ -166,11 +166,16 @@ coderr_backend/
    It listens on `127.0.0.1:5433` and matches the values in `.env.example`.
    Wait until `docker compose ps` shows the container as `healthy`.
 
-6. **Apply the database migrations**
+6. **Apply the database migrations and create the cache table**
 
    ```bash
    python manage.py migrate
+   python manage.py createcachetable
    ```
+
+   The rate limits of the contact form and the portfolio assistant are
+   counted in a database cache, so all Gunicorn workers share one count.
+   `migrate` does not create that table; without it both endpoints fail.
 
 7. **(Optional) Create an admin user** to use the Django admin at `/admin/`:
 
