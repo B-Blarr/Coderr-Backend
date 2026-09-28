@@ -1,0 +1,49 @@
+[Unit]
+Description=Laya input filter for the portfolio assistant
+# A broken model cache fails every start. Give up after five failed
+# starts instead of loading PyTorch in an endless loop.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+User=assistant
+WorkingDirectory=/var/www/coderr/backend/laya_service
+Environment=LAYA_HOST=127.0.0.1
+Environment=LAYA_PORT=8001
+Environment=LAYA_MODELS=multilingual
+Environment=LAYA_DEVICE=cpu
+# The model was downloaded once by hand. Offline mode starts from the
+# cache only: no dependency on Hugging Face, no silent model update.
+Environment=HF_HUB_OFFLINE=1
+ExecStart=/var/www/coderr/backend/laya_service/.venv/bin/laya-serve
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectProc=invisible
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+UMask=0077
+# No MemoryDenyWriteExecute: oneDNN in PyTorch generates machine code at
+# runtime, which that option forbids.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# Django on this machine is the only client, and nothing needs to go out.
+IPAddressDeny=any
+IPAddressAllow=localhost
+
+[Install]
+WantedBy=multi-user.target
