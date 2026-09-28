@@ -337,7 +337,7 @@ class KeepRelevantTests(SimpleTestCase):
     ASSISTANT_ENABLED=True, LAYA_THRESHOLD=0.8, ASSISTANT_MIN_SIMILARITY=0.5)
 @patch('assistant_app.retrieval.embed_query')
 class AssistantViewTests(APITestCase):
-    """Test POST /api/assistant/ with both services mocked."""
+    """Test POST /api/assistant/ with every service mocked."""
 
     def setUp(self):
         self.url = reverse('assistant')
@@ -345,6 +345,10 @@ class AssistantViewTests(APITestCase):
                      return_value={'jailbreak': 0.0})
         self.mock_laya = laya.start()
         self.addCleanup(laya.stop)
+        llm = patch('assistant_app.api.views.answer_question', return_value={
+            'answer': 'Mit Django.', 'answered': True, 'sources': [1]})
+        self.mock_llm = llm.start()
+        self.addCleanup(llm.stop)
         for axis in range(7):
             KnowledgeChunk.objects.create(
                 source='Quelle', position=axis, heading=f"Heading {axis}",
@@ -354,24 +358,41 @@ class AssistantViewTests(APITestCase):
         return self.client.post(
             self.url, {'question': question}, format='json', **extra)
 
-    def test_returns_relevant_sections_first(self, mock_embed):
+    def test_answers_from_the_relevant_sections(self, mock_embed):
         mock_embed.return_value = mixed_vector({3: 0.8, 4: 0.6})
+        self.mock_llm.return_value['sources'] = [2]
         response = self.ask()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['kind'], 'sections')
-        results = response.data['results']
-        self.assertEqual(
-            [(r['heading'], r['similarity']) for r in results],
-            [('Heading 3', 0.8), ('Heading 4', 0.6)])
-        self.assertEqual(
-            list(results[0]), ['source', 'heading', 'content', 'similarity'])
+        self.assertEqual(response.data, {
+            'kind': 'answer', 'answer': 'Mit Django.', 'answered': True,
+            'sources': [{'source': 'Quelle', 'heading': 'Heading 4'}]})
+        question, chunks = self.mock_llm.call_args.args
+        self.assertEqual(question, 'Wie deployt Benjamin?')
+        self.assertEqual([chunk.heading for chunk in chunks],
+                         ['Heading 3', 'Heading 4'])
         self.mock_laya.assert_called_once_with('Wie deployt Benjamin?')
 
     def test_nothing_above_the_threshold_is_off_topic(self, mock_embed):
         mock_embed.return_value = unit_vector(10)
         response = self.ask('Wie hoch ist der Mount Everest?')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'kind': 'off_topic', 'results': []})
+        self.assertEqual(response.data, {'kind': 'off_topic'})
+        self.mock_llm.assert_not_called()
+
+    def test_refusal_is_off_topic(self, mock_embed):
+        mock_embed.return_value = unit_vector(3)
+        self.mock_llm.return_value = None
+        response = self.ask()
+        self.assertEqual(response.data, {'kind': 'off_topic'})
+        self.mock_llm.assert_called_once()
+
+    def test_llm_failure_returns_503(self, mock_embed):
+        mock_embed.return_value = unit_vector(3)
+        self.mock_llm.side_effect = LlmServiceError('down')
+        with self.assertLogs('assistant_app.api.views', 'ERROR'):
+            response = self.ask()
+        self.assertEqual(
+            response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
 
     def test_greeting_is_answered_without_services(self, mock_embed):
         response = self.ask('Hallo!')
@@ -379,6 +400,7 @@ class AssistantViewTests(APITestCase):
         self.assertEqual(response.data, {'kind': 'greeting'})
         self.mock_laya.assert_not_called()
         mock_embed.assert_not_called()
+        self.mock_llm.assert_not_called()
 
     def test_invalid_questions_return_400(self, mock_embed):
         for question in ['   ', 'a' * 501]:
@@ -402,6 +424,7 @@ class AssistantViewTests(APITestCase):
         self.assertIn('0.98', logs.output[0])
         self.assertNotIn('Ignoriere', logs.output[0])
         mock_embed.assert_not_called()
+        self.mock_llm.assert_not_called()
 
     def test_laya_failure_returns_503(self, mock_embed):
         self.mock_laya.side_effect = LayaServiceError('down')
