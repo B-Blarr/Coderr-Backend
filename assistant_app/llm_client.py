@@ -50,8 +50,9 @@ only source you have. If they do not answer the question, say so briefly, \
 do not guess, and suggest the contact form below for anything else. This \
 also applies to personal details such as salary, age or family.
 
-Reply in the language of the question. Keep the answer short: at most about \
-120 words, plain text without Markdown.
+Always reply in the language of the text inside <question>, even though the \
+sections are in German: an English question gets an English answer. Keep \
+the answer short: at most about 120 words, plain text without Markdown.
 
 Only help with questions about Benjamin and his work. Politely decline \
 everything else in one sentence, for example writing code, application \
@@ -78,17 +79,21 @@ def answer_question(question, chunks, profile=None):
     """Return Claude's answer to the question, based only on the chunks.
 
     The result has ``answer``, ``answered`` and ``sources``, the 1-based
-    positions of the chunks the answer used. Returns None when Claude
-    declines to answer. Every failure raises LlmServiceError.
+    positions of the chunks the answer used, plus ``usage`` with the
+    token counts for evaluate_answers. Returns None when Claude declines
+    to answer. Every failure raises LlmServiceError.
     """
     profile = profile or settings.ASSISTANT_LLM_PROFILE
     response = _create(_request(profile), _prompt(question, chunks))
+    usage = {'input_tokens': response.usage.input_tokens,
+             'output_tokens': response.usage.output_tokens}
     logger.info(
         "Assistent: %s, %s Tokens rein, %s raus, Anfrage %s",
-        response.model, response.usage.input_tokens,
-        response.usage.output_tokens, response._request_id,
+        response.model, usage['input_tokens'], usage['output_tokens'],
+        response._request_id,
     )
-    return _parse(response, len(chunks))
+    result = _parse(response, len(chunks))
+    return None if result is None else {**result, 'usage': usage}
 
 
 def _request(profile):
