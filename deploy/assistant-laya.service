@@ -19,6 +19,13 @@ ExecStart=/var/www/coderr/backend/laya_service/.venv/bin/laya-serve
 Restart=on-failure
 RestartSec=5
 
+# Without a limit, the kernel picks any large process when memory runs
+# out, possibly PostgreSQL. Measured peak: 2.4G after a cold start.
+MemoryMax=3G
+# A model in swap makes every request time out. Stop and restart the
+# service instead.
+MemorySwapMax=0
+
 NoNewPrivileges=yes
 PrivateTmp=yes
 PrivateDevices=yes

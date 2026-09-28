@@ -16,6 +16,14 @@ ExecStart=/var/www/coderr/backend/embedding_service/.venv/bin/uvicorn \
 Restart=on-failure
 RestartSec=5
 
+# Without a limit, the kernel picks any large process when memory runs
+# out, possibly PostgreSQL. Measured peak: 1.9G during build_index. The
+# margin covers sections up to the model's limit of 512 tokens.
+MemoryMax=3G
+# A model in swap makes every request time out. Stop and restart the
+# service instead.
+MemorySwapMax=0
+
 NoNewPrivileges=yes
 PrivateTmp=yes
 PrivateDevices=yes
