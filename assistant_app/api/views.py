@@ -17,21 +17,24 @@ from assistant_app.laya_client import (
     is_attack,
     score_question,
 )
+from assistant_app.llm_client import LlmServiceError, answer_question
 from assistant_app.retrieval import keep_relevant, search
 
-from .serializers import ChunkResultSerializer, QuestionSerializer
+from .serializers import QuestionSerializer, SourceSerializer
 from .throttling import AssistantGlobalThrottle, AssistantRateThrottle
 
 logger = logging.getLogger(__name__)
 
+SERVICE_ERRORS = (EmbeddingServiceError, LayaServiceError, LlmServiceError)
+
 
 class AssistantView(APIView):
-    """Returns the knowledge sections that best match a question.
+    """Answers a visitor question from the knowledge base.
 
-    Pure greetings are answered right away, every other question goes
-    through Laya first. No language model is involved yet: the response
-    shows exactly what retrieval found, so its quality can be measured on
-    its own. ``kind`` tells the frontend which case it got.
+    Pure greetings are answered right away. Every other question goes
+    through Laya, the search and the similarity threshold before Claude
+    writes an answer from the remaining sections. ``kind`` tells the
+    frontend which case it got.
     """
 
     permission_classes = [AllowAny]
@@ -40,7 +43,7 @@ class AssistantView(APIView):
 
     @extend_schema(exclude=True)
     def post(self, request):
-        """Check the question and return the closest sections.
+        """Check the question and answer it.
 
         Excluded from the generated API schema: this endpoint belongs to
         the portfolio and is not part of the Coderr API.
@@ -53,12 +56,10 @@ class AssistantView(APIView):
         if is_greeting(question):
             return Response({'kind': 'greeting'})
         try:
-            self._reject_attacks(question)
-            chunks = keep_relevant(search(question))
-        except (LayaServiceError, EmbeddingServiceError) as error:
+            return self._answer(question)
+        except SERVICE_ERRORS as error:
             logger.error("Assistent: %s", error)
             return self._unavailable()
-        return self._sections(chunks)
 
     def check_throttles(self, request):
         """Stop at the first throttle that refuses the request.
@@ -69,6 +70,25 @@ class AssistantView(APIView):
         for throttle in self.get_throttles():
             if not throttle.allow_request(request, self):
                 self.throttled(request, throttle.wait())
+
+    def _answer(self, question):
+        """Let Claude answer from the relevant sections, if there are any.
+
+        No section above the threshold and a refusal by Claude both end
+        as off_topic, so neither case costs a second request.
+        """
+        self._reject_attacks(question)
+        chunks = keep_relevant(search(question))
+        result = answer_question(question, chunks) if chunks else None
+        if result is None:
+            return Response({'kind': 'off_topic'})
+        used = [chunks[position - 1] for position in result['sources']]
+        return Response({
+            'kind': 'answer',
+            'answer': result['answer'],
+            'answered': result['answered'],
+            'sources': SourceSerializer(used, many=True).data,
+        })
 
     def _reject_attacks(self, question):
         """Raise PermissionDenied when Laya flags the question.
@@ -81,13 +101,6 @@ class AssistantView(APIView):
             logger.warning("Assistent: Frage abgelehnt, Werte %s", scores)
             raise PermissionDenied(
                 "Diese Frage kann der Assistent nicht beantworten.")
-
-    def _sections(self, chunks):
-        """Return the relevant sections, or off_topic when none is left."""
-        if not chunks:
-            return Response({'kind': 'off_topic', 'results': []})
-        results = ChunkResultSerializer(chunks, many=True).data
-        return Response({'kind': 'sections', 'results': results})
 
     def _unavailable(self):
         """Answer 503 when the assistant is switched off or broken."""
