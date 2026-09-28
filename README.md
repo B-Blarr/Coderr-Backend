@@ -345,7 +345,7 @@ site: visitors ask questions about me and my projects, and the answer comes
 from a knowledge base I maintain instead of being made up. The feature is
 under construction and not live yet.
 
-The current stage covers the input filter and retrieval, without a language
+The current stage covers the safeguards and retrieval, without a language
 model yet:
 
 1. `assistant_app/knowledge/*.md` holds the knowledge base, cut into sections
@@ -353,13 +353,18 @@ model yet:
 2. `python manage.py build_index` embeds every section through the
    [embedding service](embedding_service/README.md) and stores the vectors in
    PostgreSQL with pgvector.
-3. `POST /api/assistant/` with `{"question": "..."}` first sends the question
-   to [Laya](laya_service/README.md), a small classifier for jailbreak
-   attempts, and answers `403` if its score reaches `LAYA_THRESHOLD` (0.8).
-   Otherwise it returns the five closest sections with their cosine
-   similarity.
+3. `POST /api/assistant/` with `{"question": "..."}` answers a pure greeting
+   such as "Hallo" right away with `{"kind": "greeting"}`. Every other
+   question goes to [Laya](laya_service/README.md), a small classifier for
+   jailbreak attempts, which answers `403` if its score reaches
+   `LAYA_THRESHOLD` (0.8). Then the five closest sections are searched, and
+   only those with a cosine similarity of at least
+   `ASSISTANT_MIN_SIMILARITY` (0.76) are kept: `{"kind": "sections",
+   "results": [...]}`, or `{"kind": "off_topic", "results": []}` when none is
+   left.
 4. `python manage.py evaluate_retrieval` checks a fixed list of questions, in
-   German and English, against the sections they should find.
+   German and English, against the sections they should find, and counts the
+   questions on and off topic below the similarity threshold.
 5. `python manage.py evaluate_guard` sends the same questions and a list of
    attacks through Laya and reports false alarms and missed attacks.
 
@@ -369,6 +374,18 @@ and catches 8 of 15 attacks; quiet attacks without typical jailbreak wording
 get through. The threshold is a trade-off: a lower one also blocked genuine
 questions about AI, which is worse for a portfolio than a missed attack,
 because the knowledge base holds only public content.
+
+Two throttles limit the questions: 20 per hour per client address, taken
+from the `X-Real-IP` header that Nginx sets, and 200 per day for all clients
+together, which caps the cost even when many addresses take part. An address
+over its own limit does not use up the shared quota: the view stops at the
+first throttle that refuses, while DRF by default asks every throttle.
+
+The similarity threshold is a coarse filter as well. It stops 11 of 24
+questions off topic and none of the 49 on topic, but only general knowledge
+questions score that low. Realistic off-topic requests such as coding help
+score higher than many genuine questions, so they are left to the language
+model's instructions in the next stage.
 
 The endpoint fails closed. It answers `503` when Laya or the embedding service
 does not respond, and unless `ASSISTANT_ENABLED=True` is set. Only the Laya
