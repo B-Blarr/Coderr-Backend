@@ -14,12 +14,14 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework.throttling import SimpleRateThrottle
 
 from assistant_app.embedding_client import (
     EmbeddingServiceError,
     embed_passages,
     embed_query,
 )
+from assistant_app.greetings import is_greeting
 from assistant_app.knowledge_base import KnowledgeBaseError, read_sections
 from assistant_app.laya_client import (
     LayaServiceError,
@@ -31,6 +33,7 @@ from assistant_app.management.commands.evaluate_retrieval import (
     DEFAULT_QUESTIONS,
 )
 from assistant_app.models import KnowledgeChunk
+from assistant_app.retrieval import keep_relevant
 from core.settings import env_probability
 
 KNOWLEDGE_DIR = Path(__file__).resolve().parent.parent / 'knowledge'
@@ -40,6 +43,14 @@ def unit_vector(axis):
     """Return a 768-dimensional vector that points along one axis."""
     vector = [0.0] * 768
     vector[axis] = 1.0
+    return vector
+
+
+def mixed_vector(weights):
+    """Return a unit vector split across axes, e.g. {3: 0.8, 4: 0.6}."""
+    vector = [0.0] * 768
+    for axis, weight in weights.items():
+        vector[axis] = weight
     return vector
 
 
@@ -286,7 +297,34 @@ class BuildIndexTests(TestCase):
         self.assertEqual(KnowledgeChunk.objects.get().source, 'Alt')
 
 
-@override_settings(ASSISTANT_ENABLED=True, LAYA_THRESHOLD=0.8)
+class GreetingTests(SimpleTestCase):
+    """Test which messages count as a pure greeting."""
+
+    def test_recognizes_greetings_in_any_spelling(self):
+        texts = ['Hallo', 'hallo!', '  Guten   Morgen. ', 'GUDE', 'Halo',
+                 'Tschüß', 'Danke!!', 'Hi \N{WAVING HAND SIGN}']
+        for text in texts:
+            with self.subTest(text=text):
+                self.assertTrue(is_greeting(text))
+
+    def test_questions_are_not_greetings(self):
+        for text in ['Hallo, was hast du mit Django gebaut?',
+                     'Hallo Benjamin', 'Was machst du morgen?', 'Hilfe']:
+            with self.subTest(text=text):
+                self.assertFalse(is_greeting(text))
+
+
+@override_settings(ASSISTANT_MIN_SIMILARITY=0.8)
+class KeepRelevantTests(SimpleTestCase):
+    """Test the similarity threshold on found chunks."""
+
+    def test_keeps_chunks_at_or_above_the_threshold(self):
+        chunks = keep_relevant(ranked('A', 'B', 'C'))
+        self.assertEqual([chunk.heading for chunk in chunks], ['A', 'B'])
+
+
+@override_settings(
+    ASSISTANT_ENABLED=True, LAYA_THRESHOLD=0.8, ASSISTANT_MIN_SIMILARITY=0.5)
 @patch('assistant_app.retrieval.embed_query')
 class AssistantViewTests(APITestCase):
     """Test POST /api/assistant/ with both services mocked."""
@@ -306,18 +344,31 @@ class AssistantViewTests(APITestCase):
         return self.client.post(
             self.url, {'question': question}, format='json', **extra)
 
-    def test_returns_closest_sections_first(self, mock_embed):
-        mock_embed.return_value = unit_vector(3)
+    def test_returns_relevant_sections_first(self, mock_embed):
+        mock_embed.return_value = mixed_vector({3: 0.8, 4: 0.6})
         response = self.ask()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['kind'], 'sections')
         results = response.data['results']
-        self.assertEqual(len(results), 5)
-        self.assertEqual(results[0]['heading'], 'Heading 3')
-        self.assertEqual(results[0]['similarity'], 1.0)
-        self.assertEqual(results[1]['similarity'], 0.0)
+        self.assertEqual(
+            [(r['heading'], r['similarity']) for r in results],
+            [('Heading 3', 0.8), ('Heading 4', 0.6)])
         self.assertEqual(
             list(results[0]), ['source', 'heading', 'content', 'similarity'])
         self.mock_laya.assert_called_once_with('Wie deployt Benjamin?')
+
+    def test_nothing_above_the_threshold_is_off_topic(self, mock_embed):
+        mock_embed.return_value = unit_vector(10)
+        response = self.ask('Wie hoch ist der Mount Everest?')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'kind': 'off_topic', 'results': []})
+
+    def test_greeting_is_answered_without_services(self, mock_embed):
+        response = self.ask('Hallo!')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'kind': 'greeting'})
+        self.mock_laya.assert_not_called()
+        mock_embed.assert_not_called()
 
     def test_invalid_questions_return_400(self, mock_embed):
         for question in ['   ', 'a' * 501]:
@@ -366,6 +417,7 @@ class AssistantViewTests(APITestCase):
         mock_embed.assert_not_called()
 
 
+@override_settings(ASSISTANT_MIN_SIMILARITY=0.85)
 @patch('assistant_app.management.commands.evaluate_retrieval.search')
 class EvaluateRetrievalTests(TestCase):
     """Test the evaluation report with the search mocked."""
@@ -402,6 +454,17 @@ class EvaluateRetrievalTests(TestCase):
         self.assertIn('OFF  - 0.900  Lasagne?', output)
         self.assertIn('best: Git', output)
         self.assertIn('In top 3: 1 of 2', output)
+
+    def test_counts_questions_below_the_threshold(self, mock_search):
+        weak = ranked('Git')
+        weak[0].distance = 0.3
+        mock_search.side_effect = [ranked('Deploy'), weak]
+        output = self.evaluate([
+            {'question': 'Wie deployt er?', 'expected': ['Deploy']},
+            {'question': 'Lasagne?', 'expected': []},
+        ])
+        self.assertIn(
+            'Below threshold 0.85: 0 of 1 on topic, 1 of 1 off topic', output)
 
     def test_rejects_unknown_headings(self, mock_search):
         cases = [
@@ -495,3 +558,52 @@ class EvaluateGuardTests(SimpleTestCase):
             with self.subTest(attack=attack):
                 self.assertIsInstance(attack, str)
                 self.assertTrue(attack.strip())
+
+
+def throttle_rates(per_address, overall):
+    """Patch the throttle rates, which DRF reads once at import time."""
+    return patch.object(SimpleRateThrottle, 'THROTTLE_RATES', {
+        'assistant': per_address, 'assistant_global': overall})
+
+
+@override_settings(ASSISTANT_ENABLED=False)
+class AssistantThrottleTests(APITestCase):
+    """Test both throttles; the switched-off view answers 503 when allowed."""
+
+    def ask(self, address=None):
+        extra = {'HTTP_X_REAL_IP': address} if address else {}
+        return self.client.post(
+            reverse('assistant'), {'question': 'Frage'}, format='json',
+            **extra)
+
+    def test_limits_questions_per_address(self):
+        with throttle_rates('2/hour', '100/day'):
+            codes = [self.ask('1.1.1.1').status_code for _ in range(3)]
+            other = self.ask('2.2.2.2')
+        self.assertEqual(codes, [503, 503, 429])
+        self.assertEqual(other.status_code, 503)
+
+    def test_without_header_uses_remote_address(self):
+        with throttle_rates('1/hour', '100/day'):
+            first, second = self.ask(), self.ask()
+        self.assertEqual((first.status_code, second.status_code), (503, 429))
+
+    def test_limits_all_addresses_together(self):
+        with throttle_rates('10/hour', '2/day'):
+            codes = [self.ask(f"1.1.1.{i}").status_code for i in range(3)]
+        self.assertEqual(codes, [503, 503, 429])
+
+    def test_refused_address_does_not_use_global_quota(self):
+        with throttle_rates('1/hour', '3/day'):
+            for _ in range(5):
+                self.ask('1.1.1.1')
+            response = self.ask('2.2.2.2')
+        self.assertEqual(response.status_code, 503)
+
+    def test_throttled_answer_says_when_to_retry(self):
+        with throttle_rates('1/hour', '100/day'):
+            self.ask('1.1.1.1')
+            response = self.ask('1.1.1.1')
+        self.assertEqual(
+            response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertIn('Retry-After', response.headers)
