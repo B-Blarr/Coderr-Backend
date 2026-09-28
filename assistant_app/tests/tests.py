@@ -38,6 +38,9 @@ from assistant_app.llm_client import (
     _client,
     answer_question,
 )
+from assistant_app.management.commands.evaluate_answers import (
+    DEFAULT_QUESTIONS as ANSWER_QUESTIONS,
+)
 from assistant_app.management.commands.evaluate_guard import DEFAULT_ATTACKS
 from assistant_app.management.commands.evaluate_retrieval import (
     DEFAULT_QUESTIONS,
@@ -687,8 +690,9 @@ class LlmClientTests(SimpleTestCase):
         data = {'answer': 'Ja.', 'answered': True, 'sources': [2, 0, 5, 2]}
         self.create(mock_client).return_value = claude_response(data)
         result = answer_question('Frage', ranked('A', 'B'))
-        self.assertEqual(
-            result, {'answer': 'Ja.', 'answered': True, 'sources': [2]})
+        self.assertEqual(result, {
+            'answer': 'Ja.', 'answered': True, 'sources': [2],
+            'usage': {'input_tokens': 100, 'output_tokens': 20}})
 
     def test_refusal_returns_none(self, mock_client):
         self.create(mock_client).return_value = claude_response(
@@ -759,3 +763,93 @@ class LlmSettingsCheckTests(SimpleTestCase):
     @override_settings(ASSISTANT_ENABLED=False, ANTHROPIC_API_KEY='')
     def test_switched_off_assistant_needs_no_key(self):
         self.assertEqual(self.message_ids(), [])
+
+
+def fake_answer(answered):
+    """Return a Claude result as answer_question delivers it."""
+    return {'answer': 'Mit Django.', 'answered': answered, 'sources': [1],
+            'usage': {'input_tokens': 1000, 'output_tokens': 100}}
+
+
+@override_settings(ASSISTANT_MIN_SIMILARITY=0.85)
+@patch('assistant_app.management.commands.evaluate_answers.answer_question')
+@patch('assistant_app.management.commands.evaluate_answers.search')
+class EvaluateAnswersTests(SimpleTestCase):
+    """Test the profile comparison with search and Claude mocked."""
+
+    def setUp(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        self.questions = Path(temp_dir.name) / 'questions.json'
+
+    def evaluate(self, cases, run=True):
+        self.questions.write_text(json.dumps(cases), encoding='utf-8')
+        output = StringIO()
+        call_command('evaluate_answers', questions=self.questions,
+                     profiles=['haiku'], run=run, stdout=output)
+        return output.getvalue()
+
+    def search_results(self):
+        weak = ranked('Weak')
+        weak[0].distance = 0.3
+        return {'Django?': ranked('A'), 'Gehalt?': ranked('B'),
+                'Everest?': weak, 'Pokedex?': ranked('C')}
+
+    def test_preview_sends_nothing(self, mock_search, mock_answer):
+        mock_search.side_effect = self.search_results().get
+        output = self.evaluate([
+            {'question': 'Django?', 'expect': 'answer'},
+            {'question': 'Everest?', 'expect': 'decline'},
+        ], run=False)
+        self.assertIn('1 of 2 questions pass the threshold', output)
+        self.assertIn('about 0.3 cents', output)
+        mock_answer.assert_not_called()
+
+    def test_run_judges_every_case(self, mock_search, mock_answer):
+        mock_search.side_effect = self.search_results().get
+        results = {'Django?': fake_answer(True), 'Gehalt?': fake_answer(False),
+                   'Pokedex?': None}
+        mock_answer.side_effect = lambda question, *_: results[question]
+        output = self.evaluate([
+            {'question': 'Django?', 'expect': 'answer'},
+            {'question': 'Gehalt?', 'expect': 'decline'},
+            {'question': 'Everest?', 'expect': 'resist'},
+            {'question': 'Pokedex?', 'expect': 'answer'},
+        ])
+        self.assertIn('[OK  ] answer: answered, 0.15 cents', output)
+        self.assertIn('[OK  ] decline: not answered, 0.15 cents', output)
+        self.assertIn('[OK  ] resist: OFF TOPIC, 0.00 cents, 0.0 s', output)
+        self.assertIn('[FAIL] answer: REFUSED', output)
+        self.assertIn('A: Mit Django.', output)
+        self.assertIn('haiku: 3 of 4 as expected, 0.30 cents', output)
+        self.assertEqual(mock_answer.call_count, 3)
+        self.assertEqual(mock_answer.call_args.args[2], 'haiku')
+
+    def test_rejects_bad_question_files(self, mock_search, mock_answer):
+        cases = {
+            'empty': [],
+            'Unknown expectations': [{'question': 'Q', 'expect': 'maybe'}],
+        }
+        for message, questions in cases.items():
+            with self.subTest(message):
+                with self.assertRaisesMessage(CommandError, message):
+                    self.evaluate(questions)
+
+    def test_service_failures_are_reported(self, mock_search, mock_answer):
+        cases = [{'question': 'Django?', 'expect': 'answer'}]
+        mock_search.side_effect = EmbeddingServiceError('embedding down')
+        with self.assertRaisesMessage(CommandError, 'embedding down'):
+            self.evaluate(cases)
+        mock_search.side_effect = self.search_results().get
+        mock_answer.side_effect = LlmServiceError('claude down')
+        with self.assertRaisesMessage(CommandError, 'claude down'):
+            self.evaluate(cases)
+
+    def test_shipped_questions_cover_every_expectation(self, *mocks):
+        cases = json.loads(
+            ANSWER_QUESTIONS.read_text(encoding='utf-8'))
+        self.assertEqual({case['expect'] for case in cases},
+                         {'answer', 'decline', 'resist'})
+        for case in cases:
+            with self.subTest(case['question']):
+                self.assertTrue(case['question'].strip())
