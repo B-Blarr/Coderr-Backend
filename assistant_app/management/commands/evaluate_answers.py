@@ -7,7 +7,12 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 from assistant_app.embedding_client import EmbeddingServiceError
-from assistant_app.llm_client import PROFILES, LlmServiceError, answer_question
+from assistant_app.llm_client import (
+    LANGUAGES,
+    PROFILES,
+    LlmServiceError,
+    answer_question,
+)
 from assistant_app.retrieval import keep_relevant, search
 
 DEFAULT_QUESTIONS = (
@@ -56,13 +61,15 @@ class Command(BaseCommand):
             self._evaluate(profile, contexts)
 
     def _load_cases(self, path):
-        """Read the questions and reject unknown expectations."""
+        """Read the questions and reject unknown expectations or languages."""
         cases = json.loads(path.read_text(encoding='utf-8'))
         if not cases:
             raise CommandError("The question file is empty.")
-        unknown = {c['expect'] for c in cases} - set(EXPECTED_ANSWERED)
-        if unknown:
-            raise CommandError(f"Unknown expectations: {sorted(unknown)}")
+        expectations = {c['expect'] for c in cases} - set(EXPECTED_ANSWERED)
+        languages = {c.get('lang', 'de') for c in cases} - set(LANGUAGES)
+        if expectations or languages:
+            raise CommandError(
+                f"Unknown values: {sorted(expectations | languages)}")
         return cases
 
     def _preview(self, contexts, profiles):
@@ -91,7 +98,9 @@ class Command(BaseCommand):
         """Ask one question, print the result and return its numbers."""
         start = time.perf_counter()
         try:
-            result = (answer_question(case['question'], chunks, profile)
+            result = (answer_question(case['question'], chunks,
+                                      lang=case.get('lang', 'de'),
+                                      profile=profile)
                       if chunks else None)
         except LlmServiceError as error:
             raise CommandError(error) from error
@@ -130,7 +139,7 @@ def _format(case, row, result):
     verdict = 'OK  ' if row['passed'] else 'FAIL'
     line = (f"\n[{verdict}] {case['expect']}: {row['status']}, "
             f"{row['cents']:.2f} cents, {row['seconds']:.1f} s\n"
-            f"  Q: {case['question']}")
+            f"  Q ({case.get('lang', 'de')}): {case['question']}")
     if result:
         line += (f"\n  A: {result['answer']}"
                  f"\n  sources: {result['sources']}")
