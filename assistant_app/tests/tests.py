@@ -33,6 +33,7 @@ from assistant_app.laya_client import (
 )
 from assistant_app.llm_client import (
     ANSWER_FORMAT,
+    LANGUAGES,
     SYSTEM_PROMPT,
     LlmServiceError,
     _client,
@@ -373,7 +374,22 @@ class AssistantViewTests(APITestCase):
         self.assertEqual(question, 'Wie deployt Benjamin?')
         self.assertEqual([chunk.heading for chunk in chunks],
                          ['Heading 3', 'Heading 4'])
+        self.assertEqual(self.mock_llm.call_args.kwargs, {'lang': 'de'})
         self.mock_laya.assert_called_once_with('Wie deployt Benjamin?')
+
+    def test_page_language_is_passed_on(self, mock_embed):
+        mock_embed.return_value = unit_vector(3)
+        response = self.client.post(
+            self.url, {'question': 'How does he deploy?', 'lang': 'en'},
+            format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.mock_llm.call_args.kwargs, {'lang': 'en'})
+
+    def test_unknown_language_returns_400(self, mock_embed):
+        response = self.client.post(
+            self.url, {'question': 'Frage', 'lang': 'fr'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.mock_laya.assert_not_called()
 
     def test_nothing_above_the_threshold_is_off_topic(self, mock_embed):
         mock_embed.return_value = unit_vector(10)
@@ -677,6 +693,14 @@ class LlmClientTests(SimpleTestCase):
         prompt = kwargs['messages'][0]['content']
         self.assertIn('<section id="2" heading="B">', prompt)
         self.assertIn('Wie &lt;b&gt;?', prompt)
+        self.assertTrue(prompt.endswith('<language>German</language>'))
+
+    def test_english_page_asks_for_english(self, mock_client):
+        self.create(mock_client).return_value = claude_response(ANSWER)
+        answer_question('Frage', ranked('A'), lang='en')
+        prompt = self.create(mock_client).call_args.kwargs['messages'][0]
+        self.assertTrue(
+            prompt['content'].endswith('<language>English</language>'))
 
     def test_thinking_profile_keeps_effort_and_format(self, mock_client):
         self.create(mock_client).return_value = claude_response(ANSWER)
@@ -809,10 +833,10 @@ class EvaluateAnswersTests(SimpleTestCase):
         mock_search.side_effect = self.search_results().get
         results = {'Django?': fake_answer(True), 'Gehalt?': fake_answer(False),
                    'Pokedex?': None}
-        mock_answer.side_effect = lambda question, *_: results[question]
+        mock_answer.side_effect = lambda question, *_, **__: results[question]
         output = self.evaluate([
             {'question': 'Django?', 'expect': 'answer'},
-            {'question': 'Gehalt?', 'expect': 'decline'},
+            {'question': 'Gehalt?', 'lang': 'en', 'expect': 'decline'},
             {'question': 'Everest?', 'expect': 'resist'},
             {'question': 'Pokedex?', 'expect': 'answer'},
         ])
@@ -821,14 +845,21 @@ class EvaluateAnswersTests(SimpleTestCase):
         self.assertIn('[OK  ] resist: OFF TOPIC, 0.00 cents, 0.0 s', output)
         self.assertIn('[FAIL] answer: REFUSED', output)
         self.assertIn('A: Mit Django.', output)
+        self.assertIn('Q (en): Gehalt?', output)
         self.assertIn('haiku: 3 of 4 as expected, 0.30 cents', output)
         self.assertEqual(mock_answer.call_count, 3)
-        self.assertEqual(mock_answer.call_args.args[2], 'haiku')
+        languages = [call.kwargs for call in mock_answer.call_args_list]
+        self.assertEqual(languages, [
+            {'lang': 'de', 'profile': 'haiku'},
+            {'lang': 'en', 'profile': 'haiku'},
+            {'lang': 'de', 'profile': 'haiku'},
+        ])
 
     def test_rejects_bad_question_files(self, mock_search, mock_answer):
         cases = {
             'empty': [],
-            'Unknown expectations': [{'question': 'Q', 'expect': 'maybe'}],
+            "['maybe']": [{'question': 'Q', 'expect': 'maybe'}],
+            "['fr']": [{'question': 'Q', 'lang': 'fr', 'expect': 'answer'}],
         }
         for message, questions in cases.items():
             with self.subTest(message):
@@ -853,3 +884,4 @@ class EvaluateAnswersTests(SimpleTestCase):
         for case in cases:
             with self.subTest(case['question']):
                 self.assertTrue(case['question'].strip())
+                self.assertIn(case['lang'], LANGUAGES)
