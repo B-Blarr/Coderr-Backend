@@ -5,8 +5,10 @@ import os
 import tempfile
 from io import StringIO
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
+import anthropic
 import httpx
 from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
@@ -16,6 +18,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework.throttling import SimpleRateThrottle
 
+from assistant_app.checks import check_llm_settings
 from assistant_app.embedding_client import (
     EmbeddingServiceError,
     embed_passages,
@@ -27,6 +30,13 @@ from assistant_app.laya_client import (
     LayaServiceError,
     is_attack,
     score_question,
+)
+from assistant_app.llm_client import (
+    ANSWER_FORMAT,
+    SYSTEM_PROMPT,
+    LlmServiceError,
+    _client,
+    answer_question,
 )
 from assistant_app.management.commands.evaluate_guard import DEFAULT_ATTACKS
 from assistant_app.management.commands.evaluate_retrieval import (
@@ -607,3 +617,122 @@ class AssistantThrottleTests(APITestCase):
         self.assertEqual(
             response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
         self.assertIn('Retry-After', response.headers)
+
+
+def claude_response(data, stop_reason='end_turn'):
+    """Return a fake Messages API response carrying the given JSON."""
+    text = data if isinstance(data, str) else json.dumps(data)
+    return SimpleNamespace(
+        model='claude-haiku-4-5', stop_reason=stop_reason,
+        _request_id='req_1',
+        usage=SimpleNamespace(input_tokens=100, output_tokens=20),
+        content=[SimpleNamespace(type='text', text=text)])
+
+
+ANSWER = {'answer': ' Mit Django. ', 'answered': True, 'sources': [1]}
+
+
+@override_settings(ANTHROPIC_API_KEY='test-key', ASSISTANT_LLM_PROFILE='haiku')
+@patch('assistant_app.llm_client._client')
+class LlmClientTests(SimpleTestCase):
+    """Test the Claude client with the SDK mocked."""
+
+    def create(self, mock_client):
+        return mock_client.return_value.messages.create
+
+    def test_sends_profile_prompt_and_format(self, mock_client):
+        self.create(mock_client).return_value = claude_response(ANSWER)
+        answer_question('Wie <b>?', ranked('A', 'B'))
+        kwargs = self.create(mock_client).call_args.kwargs
+        self.assertEqual(kwargs['model'], 'claude-haiku-4-5')
+        self.assertNotIn('thinking', kwargs)
+        self.assertEqual(kwargs['output_config'], {'format': ANSWER_FORMAT})
+        self.assertEqual(kwargs['system'], SYSTEM_PROMPT)
+        prompt = kwargs['messages'][0]['content']
+        self.assertIn('<section id="2" heading="B">', prompt)
+        self.assertIn('Wie &lt;b&gt;?', prompt)
+
+    def test_thinking_profile_keeps_effort_and_format(self, mock_client):
+        self.create(mock_client).return_value = claude_response(ANSWER)
+        answer_question('Frage', ranked('A'), profile='sonnet-thinking')
+        kwargs = self.create(mock_client).call_args.kwargs
+        self.assertEqual(kwargs['thinking'], {'type': 'adaptive'})
+        self.assertEqual(kwargs['output_config'],
+                         {'effort': 'low', 'format': ANSWER_FORMAT})
+
+    def test_returns_answer_with_valid_sources_only(self, mock_client):
+        data = {'answer': 'Ja.', 'answered': True, 'sources': [2, 0, 5, 2]}
+        self.create(mock_client).return_value = claude_response(data)
+        result = answer_question('Frage', ranked('A', 'B'))
+        self.assertEqual(
+            result, {'answer': 'Ja.', 'answered': True, 'sources': [2]})
+
+    def test_refusal_returns_none(self, mock_client):
+        self.create(mock_client).return_value = claude_response(
+            '', stop_reason='refusal')
+        self.assertIsNone(answer_question('Frage', ranked('A')))
+
+    def test_unusable_answers_raise(self, mock_client):
+        cases = {
+            'cut off': claude_response(ANSWER, stop_reason='max_tokens'),
+            'no JSON': claude_response('oops'),
+            'field missing': claude_response({'answer': 'Ja.'}),
+            'answer not text': claude_response({**ANSWER, 'answer': 1}),
+            'sources not a list': claude_response({**ANSWER, 'sources': 1}),
+        }
+        for label, response in cases.items():
+            with self.subTest(label):
+                self.create(mock_client).return_value = response
+                with self.assertRaises(LlmServiceError):
+                    answer_question('Frage', ranked('A'))
+
+    def test_sdk_errors_raise(self, mock_client):
+        self.create(mock_client).side_effect = anthropic.AnthropicError('x')
+        with self.assertRaisesMessage(LlmServiceError, 'not reachable'):
+            answer_question('Frage', ranked('A'))
+
+    @override_settings(ANTHROPIC_API_KEY='')
+    def test_missing_key_raises_before_any_request(self, mock_client):
+        with self.assertRaisesMessage(LlmServiceError, 'ANTHROPIC_API_KEY'):
+            answer_question('Frage', ranked('A'))
+        mock_client.assert_not_called()
+
+    def test_logs_usage_but_not_the_question(self, mock_client):
+        self.create(mock_client).return_value = claude_response(ANSWER)
+        with self.assertLogs('assistant_app.llm_client', 'INFO') as logs:
+            answer_question('Geheime Frage', ranked('A'))
+        self.assertIn('100 Tokens rein, 20 raus, Anfrage req_1',
+                      logs.output[0])
+        self.assertNotIn('Geheime Frage', logs.output[0])
+
+
+@override_settings(ANTHROPIC_API_KEY='test-key')
+class LlmClientFactoryTests(SimpleTestCase):
+    """Test that the SDK client is built once with short timeouts."""
+
+    def test_client_is_created_once(self):
+        _client.cache_clear()
+        self.addCleanup(_client.cache_clear)
+        with patch('assistant_app.llm_client.anthropic.Anthropic') as sdk:
+            self.assertIs(_client(), _client())
+        sdk.assert_called_once_with(
+            api_key='test-key', timeout=20, max_retries=1)
+
+
+class LlmSettingsCheckTests(SimpleTestCase):
+    """Test the system check for the language model settings."""
+
+    def message_ids(self):
+        return [message.id for message in check_llm_settings(None)]
+
+    @override_settings(ASSISTANT_LLM_PROFILE='gpt', ASSISTANT_ENABLED=False)
+    def test_unknown_profile_is_an_error(self):
+        self.assertEqual(self.message_ids(), ['assistant_app.E001'])
+
+    @override_settings(ASSISTANT_ENABLED=True, ANTHROPIC_API_KEY='')
+    def test_enabled_assistant_needs_a_key(self):
+        self.assertEqual(self.message_ids(), ['assistant_app.W001'])
+
+    @override_settings(ASSISTANT_ENABLED=False, ANTHROPIC_API_KEY='')
+    def test_switched_off_assistant_needs_no_key(self):
+        self.assertEqual(self.message_ids(), [])
