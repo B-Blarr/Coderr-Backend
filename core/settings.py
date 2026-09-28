@@ -241,6 +241,10 @@ if not EMAIL_HOST_USER:
 
 ASSISTANT_ENABLED = env_bool("ASSISTANT_ENABLED")
 
+# Sections below this cosine similarity count as off topic. Measured with
+# evaluate_retrieval: the weakest question on topic scored 0.774.
+ASSISTANT_MIN_SIMILARITY = env_probability("ASSISTANT_MIN_SIMILARITY", "0.76")
+
 
 # Embedding service
 # Runs as its own process next to Django, see embedding_service/README.md.

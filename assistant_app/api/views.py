@@ -11,12 +11,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from assistant_app.embedding_client import EmbeddingServiceError
+from assistant_app.greetings import is_greeting
 from assistant_app.laya_client import (
     LayaServiceError,
     is_attack,
     score_question,
 )
-from assistant_app.retrieval import search
+from assistant_app.retrieval import keep_relevant, search
 
 from .serializers import ChunkResultSerializer, QuestionSerializer
 from .throttling import AssistantGlobalThrottle, AssistantRateThrottle
@@ -27,9 +28,10 @@ logger = logging.getLogger(__name__)
 class AssistantView(APIView):
     """Returns the knowledge sections that best match a question.
 
-    Laya checks every question first. No language model is involved yet:
-    the response shows exactly what retrieval found, so its quality can
-    be measured on its own.
+    Pure greetings are answered right away, every other question goes
+    through Laya first. No language model is involved yet: the response
+    shows exactly what retrieval found, so its quality can be measured on
+    its own. ``kind`` tells the frontend which case it got.
     """
 
     permission_classes = [AllowAny]
@@ -48,14 +50,15 @@ class AssistantView(APIView):
         serializer = QuestionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         question = serializer.validated_data['question']
+        if is_greeting(question):
+            return Response({'kind': 'greeting'})
         try:
             self._reject_attacks(question)
-            chunks = search(question)
+            chunks = keep_relevant(search(question))
         except (LayaServiceError, EmbeddingServiceError) as error:
             logger.error("Assistent: %s", error)
             return self._unavailable()
-        results = ChunkResultSerializer(chunks, many=True).data
-        return Response({'results': results})
+        return self._sections(chunks)
 
     def check_throttles(self, request):
         """Stop at the first throttle that refuses the request.
@@ -78,6 +81,13 @@ class AssistantView(APIView):
             logger.warning("Assistent: Frage abgelehnt, Werte %s", scores)
             raise PermissionDenied(
                 "Diese Frage kann der Assistent nicht beantworten.")
+
+    def _sections(self, chunks):
+        """Return the relevant sections, or off_topic when none is left."""
+        if not chunks:
+            return Response({'kind': 'off_topic', 'results': []})
+        results = ChunkResultSerializer(chunks, many=True).data
+        return Response({'kind': 'sections', 'results': results})
 
     def _unavailable(self):
         """Answer 503 when the assistant is switched off or broken."""
