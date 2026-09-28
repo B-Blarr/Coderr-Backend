@@ -52,11 +52,11 @@ class AssistantView(APIView):
             return self._unavailable()
         serializer = QuestionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        question = serializer.validated_data['question']
-        if is_greeting(question):
+        data = serializer.validated_data
+        if is_greeting(data['question']):
             return Response({'kind': 'greeting'})
         try:
-            return self._answer(question)
+            return self._answer(data['question'], data['lang'])
         except SERVICE_ERRORS as error:
             logger.error("Assistent: %s", error)
             return self._unavailable()
@@ -71,7 +71,7 @@ class AssistantView(APIView):
             if not throttle.allow_request(request, self):
                 self.throttled(request, throttle.wait())
 
-    def _answer(self, question):
+    def _answer(self, question, lang):
         """Let Claude answer from the relevant sections, if there are any.
 
         No section above the threshold and a refusal by Claude both end
@@ -79,7 +79,8 @@ class AssistantView(APIView):
         """
         self._reject_attacks(question)
         chunks = keep_relevant(search(question))
-        result = answer_question(question, chunks) if chunks else None
+        result = (answer_question(question, chunks, lang=lang)
+                  if chunks else None)
         if result is None:
             return Response({'kind': 'off_topic'})
         used = [chunks[position - 1] for position in result['sources']]

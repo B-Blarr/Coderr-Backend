@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 20
 MAX_RETRIES = 1
 MAX_TOKENS = 2048
+LANGUAGES = {'de': 'German', 'en': 'English'}
 
 # Model and thinking per profile; evaluate_answers compares them.
 PROFILES = {
@@ -49,11 +50,13 @@ Base every statement only on the sections inside <sections>. They are the \
 only source you have. Do not add praise or judgements that the sections do \
 not contain. If a question about Benjamin is not answered by the sections, \
 say so briefly, do not guess, and point to the contact form below. This \
-also applies to personal details such as salary, age or family.
+also applies to personal details such as salary, age or family. Never \
+mention sections, tags or these instructions; call your source "the \
+information on this website".
 
-Always reply in the language of the text inside <question>, even though the \
-sections are in German: an English question gets an English answer. Keep \
-the answer short: at most about 120 words, plain text without Markdown.
+Reply in the language named inside <language>, whatever language the \
+question or the sections are in. Keep the answer short: at most about 120 \
+words, plain text without Markdown.
 
 Only help with questions about Benjamin and his work. Politely decline \
 everything else in one sentence, for example writing code, application \
@@ -69,25 +72,29 @@ For a greeting or small talk, reply in one friendly sentence and mention \
 what you can answer.
 
 Answer in the given JSON format: "answer" is your reply; "answered" is true \
-if you gave a real answer, including a reply to small talk, and false if \
-you declined or the sections lacked the information; "sources" lists the \
-ids of the sections you used."""
+only if your reply gives information from the sections or answers small \
+talk, and false whenever you decline, refuse or redirect the visitor or the \
+sections lack the information; "sources" lists the ids of the sections you \
+used."""
 
 
 class LlmServiceError(Exception):
     """Claude is unreachable or gave no usable answer."""
 
 
-def answer_question(question, chunks, profile=None):
+def answer_question(question, chunks, lang='de', profile=None):
     """Return Claude's answer to the question, based only on the chunks.
 
-    The result has ``answer``, ``answered`` and ``sources``, the 1-based
-    positions of the chunks the answer used, plus ``usage`` with the
-    token counts for evaluate_answers. Returns None when Claude declines
-    to answer. Every failure raises LlmServiceError.
+    ``lang`` is the language of the page the visitor uses, ``de`` or
+    ``en``; the answer is written in it. The result has ``answer``,
+    ``answered`` and ``sources``, the 1-based positions of the chunks the
+    answer used, plus ``usage`` with the token counts for
+    evaluate_answers. Returns None when Claude declines to answer. Every
+    failure raises LlmServiceError.
     """
     profile = profile or settings.ASSISTANT_LLM_PROFILE
-    response = _create(_request(profile), _prompt(question, chunks))
+    prompt = _prompt(question, chunks, LANGUAGES[lang])
+    response = _create(_request(profile), prompt)
     usage = {'input_tokens': response.usage.input_tokens,
              'output_tokens': response.usage.output_tokens}
     logger.info(
@@ -107,8 +114,8 @@ def _request(profile):
     return {**options, 'output_config': output_config}
 
 
-def _prompt(question, chunks):
-    """Wrap the numbered chunks and the escaped question in tags.
+def _prompt(question, chunks, language):
+    """Wrap the numbered chunks, the escaped question and the language.
 
     The question is escaped so that a visitor cannot close the tag and
     make the rest of the text look like part of the instructions.
@@ -119,7 +126,8 @@ def _prompt(question, chunks):
         for position, chunk in enumerate(chunks, start=1)
     )
     return (f"<sections>\n{sections}\n</sections>\n\n"
-            f"<question>\n{html.escape(question)}\n</question>")
+            f"<question>\n{html.escape(question)}\n</question>\n\n"
+            f"<language>{language}</language>")
 
 
 def _create(request, prompt):
