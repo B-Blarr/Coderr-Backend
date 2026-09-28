@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from assistant_app.embedding_client import EmbeddingServiceError
@@ -98,5 +99,16 @@ class Command(BaseCommand):
         self.stdout.write(
             f"\nIn top {TOP_K}: {len(hits)} of {len(on_topic)}\n"
             f"Lowest best score on topic:   {lowest_on:.3f}\n"
-            f"Highest best score off topic: {highest_off:.3f}"
+            f"Highest best score off topic: {highest_off:.3f}\n"
+            f"{self._below_threshold(on_topic, off_topic)}"
+        )
+
+    def _below_threshold(self, on_topic, off_topic):
+        """Count the questions the similarity threshold would stop."""
+        threshold = settings.ASSISTANT_MIN_SIMILARITY
+        below_on = sum(row['best_score'] < threshold for row in on_topic)
+        below_off = sum(row['best_score'] < threshold for row in off_topic)
+        return (
+            f"Below threshold {threshold}: {below_on} of {len(on_topic)} "
+            f"on topic, {below_off} of {len(off_topic)} off topic"
         )
