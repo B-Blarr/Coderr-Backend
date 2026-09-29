@@ -176,6 +176,10 @@ coderr_backend/
    The rate limits of the contact form and the portfolio assistant are
    counted in a database cache, so all Gunicorn workers share one count.
    `migrate` does not create that table; without it both endpoints fail.
+   Its rows are keyed by client address, and Django deletes expired rows
+   only once the table holds more than 300 of them.
+   `python manage.py clear_expired_cache` removes them; on the server a
+   systemd timer runs it every hour.
 
 7. **(Optional) Create an admin user** to use the Django admin at `/admin/`:
 
@@ -426,7 +430,9 @@ until the portfolio shows it.
 The live instance runs on a VPS I set up and maintain myself: Ubuntu 24.04,
 Nginx as the reverse proxy, Gunicorn serving Django over a Unix socket,
 PostgreSQL as the database and TLS certificates from Let's Encrypt. Database
-and media backups run nightly through a systemd timer. Every merge into `main`
+and media backups run nightly through a systemd timer and leave out the cache
+table, which only holds rate limit counters keyed by client address. The
+contact form does not store the sender's address. Every merge into `main`
 is deployed by GitHub Actions once lint and tests pass, and each deployment
 rebuilds the assistant's knowledge index.
 

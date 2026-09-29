@@ -13,7 +13,7 @@ class ContactMessageAdmin(admin.ModelAdmin):
     list_filter = ('mail_sent', 'created_at')
     search_fields = ('name', 'email', 'message')
     readonly_fields = (
-        'name', 'email', 'message', 'created_at', 'ip_address', 'mail_sent',
+        'name', 'email', 'message', 'created_at', 'mail_sent',
     )
 
     def has_add_permission(self, request):

@@ -42,19 +42,13 @@ class ContactMessageView(APIView):
                 status=status.HTTP_201_CREATED,
             )
 
-        message = serializer.save(ip_address=self._client_ip(request))
+        message = serializer.save()
         message.mail_sent = self._send_mail(message)
         message.save(update_fields=['mail_sent'])
 
         return Response(
             {'detail': 'Nachricht empfangen.'},
             status=status.HTTP_201_CREATED,
-        )
-
-    def _client_ip(self, request):
-        """Return the client address as forwarded by Nginx."""
-        return request.META.get('HTTP_X_REAL_IP') or request.META.get(
-            'REMOTE_ADDR'
         )
 
     def _send_mail(self, message):

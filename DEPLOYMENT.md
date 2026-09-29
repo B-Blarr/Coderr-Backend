@@ -137,7 +137,9 @@ Warum umgestellt wurde, steht in Abschnitt 7.
 /etc/systemd/system/assistant-laya.service      Laya
 /var/lib/assistant/                             Home von "assistant", Modell-Cache
 /etc/ssh/sshd_config.d/00-hardening.conf        SSH-Absicherung
-/usr/local/bin/backup-coderr.sh                 tägliche Sicherung
+/usr/local/bin/backup-coderr.sh                 tägliche Sicherung (deploy/backup-coderr.sh)
+/etc/systemd/system/coderr-backup.*             Timer der Sicherung (deploy/)
+/etc/systemd/system/coderr-cache-cleanup.*      stündliches Aufräumen des Caches (deploy/)
 /var/backups/coderr/                            nächtliche Sicherungen, 14 Tage
 /home/benni/backups/coderr/                     Sicherungen vor jedem Deploy, letzte 10
 /swapfile                                        2 GB Swap
@@ -1212,6 +1214,23 @@ Es gibt zwei Sicherungen, beide als gepacktes SQL aus `pg_dump`.
 | erstellt als | `postgres`, über `/usr/local/bin/backup-coderr.sh` | `coderr`, Passwort aus der `.env` |
 | Aufbewahrung | 14 Tage | die letzten 10 |
 | Media-Ordner | ja, als `media-<Datum>.tar.gz` | nein |
+| Cache-Tabelle | nur die Struktur, ohne Zeilen | nur die Struktur, ohne Zeilen |
+
+Beide lassen seit dem 29.09.2026 die Zeilen von `django_cache` aus
+(`pg_dump --exclude-table-data=django_cache`). Dort stehen nur die
+Zähler der Ratenbegrenzung, und ihre Schlüssel enthalten die IP-Adresse
+des Besuchers. Für eine Wiederherstellung braucht es sie nicht, danach
+zählen die Limits eben von vorn (Abschnitt 5.8).
+
+Skript und Units der nächtlichen Sicherung liegen seit dem 29.09.2026
+im Repository (`deploy/backup-coderr.sh`, `deploy/coderr-backup.*`).
+Änderungen wie bei Nginx erst mit `diff` gegen die Server-Fassung
+prüfen, dann einspielen:
+
+```bash
+diff /usr/local/bin/backup-coderr.sh /tmp/backup-coderr.sh
+sudo install -m 755 -o root -g root /tmp/backup-coderr.sh /usr/local/bin/backup-coderr.sh
+```
 
 **Der Kurz-Hash im Dateinamen ist der Commit, der ausgerollt werden
 sollte, nicht der, zu dem die Sicherung passt.** Die Sicherung entsteht
@@ -1271,6 +1290,9 @@ So wird das Ergebnis gelesen:
   eins und `auth_permission` um vier (add, change, delete, view) pro
   Modell. Die letzten beiden legt Djangos `post_migrate` an, sie stehen in
   keiner Migrationsdatei.
+- **`django_cache` weicht immer ab.** Seit dem 29.09.2026 enthalten die
+  Sicherungen keine Zeilen dieser Tabelle, die Spalte `backup` zeigt
+  dort `0`. Das ist gewollt.
 - **Unter `Sequences` steht nichts.** Eine Sequenz unter der höchsten ID
   lässt den nächsten neuen Datensatz an einem doppelten Schlüssel
   scheitern, und das zeigt keine Zeilenzahl.
@@ -1411,6 +1433,19 @@ Ablauf einer Nachricht:
 Eingegangene Nachrichten stehen unter
 `https://coderr.benjaminblarr.de/admin/` bei "Kontaktnachrichten",
 inklusive der Angabe, ob der Versand geklappt hat.
+
+Die IP-Adresse des Absenders wird seit dem 29.09.2026 nicht mehr
+gespeichert, die Migration `contact_app.0002` hat die Spalte samt Inhalt
+entfernt. Nach dem Speichern hatte sie keinen Zweck mehr: Die
+Ratenbegrenzung läuft über den Cache, gegen Bots gibt es das
+Honeypot-Feld, geantwortet wird an die E-Mail-Adresse. Soll eine
+Absenderadresse doch gesperrt werden, etwa bei Spam, steht sie bis zu 15
+Tage im Access-Log von Nginx. Die Uhrzeit der Nachricht (`created_at`,
+UTC) mit der passenden Zeile vergleichen:
+
+```bash
+sudo grep "POST /api/contact/" /var/log/nginx/benjaminblarr.access.log
+```
 
 ```bash
 # Hat der Versand funktioniert?
@@ -1569,6 +1604,53 @@ meldet unter Ubuntu 24.04 einen Fehler (Abschnitt 7).
 3. Mit der Modellliste oben prüfen.
 4. Den alten Schlüssel in der Console löschen.
 
+### 5.8 IP-Adressen
+
+Übersicht für die Datenschutzerklärung, Stand 29.09.2026:
+
+| Ort | wie lange | Grund |
+|---|---|---|
+| Access-Logs von Nginx | bis zu 15 Tage | Betrieb und Sicherheit. `logrotate` rotiert täglich und behält 14 alte Dateien (`/etc/logrotate.d/nginx`, Ubuntu-Standard) |
+| `django_cache`, Ratenbegrenzung | höchstens rund 2 Stunden nach der letzten Anfrage | Kontaktformular 5 und Assistent 20 Anfragen pro Stunde und Adresse |
+| Sicherungen | gar nicht | Die Cache-Tabelle wird ohne Zeilen gesichert (5.5) |
+| Kontaktnachrichten | gar nicht | Spalte am 29.09.2026 entfernt (5.6) |
+| Journal von Gunicorn | gar nicht | Gunicorn sieht nur den Unix-Socket und schreibt `-` statt einer Adresse |
+| Anthropic | gar nicht | Die Anfrage an Claude kommt vom Server, Anthropic sieht dessen Adresse, nicht die des Besuchers. Der Fragetext geht allerdings dorthin |
+
+Die zwei Stunden im Cache ergeben sich so: Ein Throttle schreibt seinen
+Eintrag bei jeder Anfrage neu, mit einer Stunde Laufzeit. Djangos
+Datenbank-Cache löscht abgelaufene Zeilen aber nur, wenn genau dieser
+Schlüssel wieder gelesen wird oder die Tabelle mehr als 300 Zeilen hat.
+Bei wenig Besuch bliebe also jede Adresse liegen, am 29.09.2026 lagen
+dort abgelaufene Einträge vom 27.07.2026. Deshalb löscht
+`manage.py clear_expired_cache` sie stündlich, nach dem Vorbild von
+Djangos `clearsessions`, gestartet von `coderr-cache-cleanup.timer`.
+
+Einrichten, Dateien aus `deploy/` wie in 4.5 hochladen:
+
+```bash
+file /tmp/coderr-cache-cleanup.service /tmp/coderr-cache-cleanup.timer
+sudo install -m 644 -o root -g root /tmp/coderr-cache-cleanup.service /tmp/coderr-cache-cleanup.timer /etc/systemd/system/
+systemd-analyze verify /etc/systemd/system/coderr-cache-cleanup.service /etc/systemd/system/coderr-cache-cleanup.timer
+sudo systemctl daemon-reload
+sudo systemctl enable --now coderr-cache-cleanup.timer
+```
+
+Nur der Timer wird aktiviert, er startet den gleichnamigen Service. Der
+Service läuft als `benni`, weil der Befehl die Zugangsdaten aus der
+`.env` braucht.
+
+Kontrolle:
+
+```bash
+systemctl list-timers coderr-cache-cleanup --no-pager
+sudo systemctl start coderr-cache-cleanup.service
+sudo journalctl -u coderr-cache-cleanup -n 5 --no-pager
+sudo -u postgres psql -d coderr -c "select count(*) as gesamt, count(*) filter (where expires < now()) as abgelaufen from django_cache"
+```
+
+Direkt nach einem Lauf muss `abgelaufen` bei `0` stehen.
+
 ---
 
 ## 6. Fehlersuche
@@ -1596,6 +1678,8 @@ meldet unter Ubuntu 24.04 einen Fehler (Abschnitt 7).
 | Deploy rot bei `build_index` | Embedding-Dienst läuft nicht oder lädt noch | `systemctl status assistant-embedding`, dann **Re-run jobs** |
 | Dienst des Assistenten startet nicht mehr | Startlimit erreicht (`start-limit-hit`), meist Modell nicht im Cache oder Rechte | Journal lesen, Ursache beheben, dann `sudo systemctl reset-failed <dienst>` und `start` |
 | Dienst des Assistenten startet immer wieder neu | `MemoryMax=` erreicht, im Journal `oom-kill` | Speicher kalt messen (5.7), Grenze anpassen |
+| Abgelaufene Einträge in `django_cache` | Timer nicht aktiv oder Lauf gescheitert | `systemctl list-timers coderr-cache-cleanup`, `journalctl -u coderr-cache-cleanup` (5.8) |
+| Restore-Probe meldet `django_cache` als abweichend | gewollt, Sicherungen enthalten keine Cache-Zeilen | Abschnitt 5.5 |
 
 ### Wichtigste Diagnosebefehle
 
@@ -1794,14 +1878,11 @@ Für die Zukunft: Secret Key ab dem ersten Commit in die `.env`.
       für eine Domain zu erneuern, die es nicht mehr gibt
 - [ ] Portfolio-Assistent einschalten (5.7), zusammen mit dem Widget
       im Portfolio und dem Hinweis in dessen Datenschutzerklärung
-- [ ] Ratenbegrenzung: Die Schlüssel in `django_cache` enthalten die IP
-      im Klartext, und Djangos Datenbank-Cache löscht abgelaufene
-      Einträge erst ab mehr als 300 Einträgen. Bei wenig Besuch bleiben
-      IPs also liegen und landen in den Sicherungen. Betrifft auch das
-      Kontaktformular. Abgelaufene Zeilen regelmäßig löschen und die
-      Tabelle aus den Sicherungen nehmen
-      (`pg_dump --exclude-table-data=django_cache`). Vor dem Einschalten
-      des Assistenten erledigen
+- [ ] Sicherungen von vor dem 29.09.2026 enthalten noch IP-Adressen
+      (Cache und Kontaktnachrichten). Die nächtlichen laufen bis zum
+      13.10.2026 von selbst heraus. Die Deploy-Sicherungen in
+      `~/backups/coderr/` haben keine Zeitgrenze, die älteren von Hand
+      löschen, sobald sich der Deploy vom 29.09.2026 bewährt hat
 - [ ] Ablaufdatum des API-Schlüssels `coderr-server` im Kalender
       vormerken
 - [ ] Deutsche Kommentare in `deploy/nginx-projekte.conf` übersetzen,
@@ -1810,6 +1891,13 @@ Für die Zukunft: Secret Key ab dem ersten Commit in die `.env`.
       Assistenten (`systemd-analyze security`: 9.2 UNSAFE)
 - [ ] Optional: `staticfiles/` in die `.gitignore`, damit `git status`
       auf dem Server ganz leer ist
+
+### Erledigt am 29.09.2026
+
+- [x] Abgelaufene Cache-Einträge werden stündlich gelöscht (5.8)
+- [x] Beide Sicherungen ohne die Zeilen von `django_cache` (5.5)
+- [x] Kontaktformular speichert keine IP-Adresse mehr (5.6)
+- [x] Sicherungsskript und seine Units ins Repository geholt
 
 ### Erledigt am 28.09.2026
 
