@@ -1,0 +1,25 @@
+[Unit]
+Description=Warm up the models of the portfolio assistant
+# Ordering only: a run must not start a service that was stopped on
+# purpose, so there is no Requires=.
+After=assistant-laya.service assistant-embedding.service
+
+[Service]
+Type=oneshot
+# Only talks to 127.0.0.1 and needs neither the .env nor the database.
+User=assistant
+# Through bash, because Git on Windows does not keep the executable bit.
+ExecStart=/bin/bash /var/www/coderr/backend/deploy/assistant-warmup.sh
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+
+[Install]
+# Also runs whenever one of the services starts, so that no restart,
+# manual or automatic, leaves a cold model for up to ten minutes.
+WantedBy=assistant-laya.service assistant-embedding.service
