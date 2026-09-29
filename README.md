@@ -80,13 +80,13 @@ coderr_backend/
 ├── base_app/           # Aggregated platform statistics (base-info)
 │   └── api/            # views.py, urls.py
 ├── contact_app/        # Contact form of the portfolio site
-├── assistant_app/      # Input filter and retrieval for the portfolio assistant
+├── assistant_app/      # Portfolio assistant: input filter, retrieval, answers
 │   ├── api/            # serializers.py, views.py, urls.py
 │   ├── knowledge/      # Knowledge base, one Markdown file per topic
-│   └── management/     # build_index, evaluate_retrieval, evaluate_guard
+│   └── management/     # build_index and the evaluate_* commands
 ├── embedding_service/  # Standalone FastAPI service that embeds texts
 ├── laya_service/       # Setup and smoke test for the Laya input filter
-├── deploy/             # Deployment script and Nginx configuration
+├── deploy/             # Deployment script, Nginx and systemd configuration
 ├── compose.yml         # Local PostgreSQL with pgvector
 ├── manage.py
 └── requirements.txt
@@ -413,7 +413,11 @@ The endpoint fails closed. It answers `503` when Laya, the embedding service
 or Claude does not respond, and unless `ASSISTANT_ENABLED=True` is set. Only
 the Laya scores and the token counts of a request are logged, never its
 text; the question itself is sent to Anthropic to be answered. Locally Laya and the
-embedding service each run in their own terminal, see their READMEs.
+embedding service each run in their own terminal, see their READMEs. On the
+server they run as two systemd services under a user of their own that cannot
+read the `.env`, reachable only from `127.0.0.1`, without any outbound
+connection and with a memory limit. The assistant stays switched off there
+until the portfolio shows it.
 
 ---
 
@@ -422,7 +426,9 @@ embedding service each run in their own terminal, see their READMEs.
 The live instance runs on a VPS I set up and maintain myself: Ubuntu 24.04,
 Nginx as the reverse proxy, Gunicorn serving Django over a Unix socket,
 PostgreSQL as the database and TLS certificates from Let's Encrypt. Database
-and media backups run nightly through a systemd timer.
+and media backups run nightly through a systemd timer. Every merge into `main`
+is deployed by GitHub Actions once lint and tests pass, and each deployment
+rebuilds the assistant's knowledge index.
 
 The complete runbook is in [DEPLOYMENT.md](DEPLOYMENT.md): every step from an
 empty server to the running site, the configuration files, and a section on

@@ -1,0 +1,28 @@
+[Unit]
+Description=Gunicorn daemon for Coderr backend
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+User=benni
+Group=www-data
+WorkingDirectory=/var/www/coderr/backend
+RuntimeDirectory=gunicorn
+# A request to the portfolio assistant takes up to about 50 seconds when
+# every service runs into its timeout (Laya 5, embedding 5, Claude 2 x 20).
+# The default of 30 seconds would kill the worker, and Nginx would answer
+# with 502.
+ExecStart=/var/www/coderr/backend/.venv/bin/gunicorn \
+    --workers 3 \
+    --timeout 60 \
+    --bind unix:/run/gunicorn/coderr.sock \
+    --umask 007 \
+    --access-logfile - \
+    --error-logfile - \
+    core.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,7 +1,7 @@
 # Coderr Deployment Runbook
 
 Betriebsdokumentation für das Deployment des Coderr-Backends auf einem
-eigenen VPS. Stand: 29.07.2026
+eigenen VPS. Stand: 28.09.2026
 
 ---
 
@@ -26,7 +26,7 @@ eigenen VPS. Stand: 29.07.2026
      ┌────────┼────────┐              ┌─────────────┼─────────────┐
      │        │        │              │             │             │
      /    /join/ u.a.  /api/contact   /          /api/       /static/
-     │        │        │              │        /admin/       /media/
+     │        │      /api/assistant   │        /admin/       /media/
  Portfolio  statische  │          Coderr-       │             │
  (Angular)  Projekte   │          Frontend   Unix-Socket   Dateien
                        │          (statisch) /run/gunicorn/ direkt von
@@ -35,7 +35,7 @@ eigenen VPS. Stand: 29.07.2026
                                   └──────┬───────┘
                                          │
                                   ┌──────────────┐
-                                  │   Gunicorn   │  3 Worker
+                                  │   Gunicorn   │  3 Worker, Timeout 60 s
                                   │   (Django)   │
                                   └──────┬───────┘
                                          │
@@ -45,8 +45,36 @@ eigenen VPS. Stand: 29.07.2026
 ```
 
 Beide Server-Blöcke sprechen denselben Gunicorn-Socket an. Die
-Hauptdomain nutzt davon nur `/api/contact/` für das Kontaktformular des
-Portfolios, die Subdomain die komplette Coderr-Anwendung.
+Hauptdomain nutzt davon `/api/contact/` für das Kontaktformular und
+`/api/assistant/` für den Assistenten des Portfolios, die Subdomain die
+komplette Coderr-Anwendung. Den Assistenten sperrt die Subdomain mit
+`404`, er hat genau einen Zugang (Abschnitt 4.4).
+
+### Portfolio-Assistent
+
+```
+POST https://benjaminblarr.de/api/assistant/
+        │
+      Nginx              projekte.conf, proxy_read_timeout 65 s
+        │
+      Gunicorn/Django    Timeout 60 s, assistant_app
+        ├─► 127.0.0.1:8001   Laya              assistant-laya.service
+        ├─► 127.0.0.1:8002   Embedding-Dienst  assistant-embedding.service
+        ├─► PostgreSQL       pgvector, Tabelle der Wissensabschnitte
+        └─► api.anthropic.com  Claude Haiku 4.5
+```
+
+Laya und der Embedding-Dienst laufen als eigene systemd-Dienste und
+nicht im Django-Prozess, weil jeder der drei Gunicorn-Worker sonst die
+Modelle einzeln laden würde. Beide laufen unter dem Systembenutzer
+`assistant`, der weder die `.env` noch die Datenbank erreicht, sind nur
+über `127.0.0.1` erreichbar und dürfen selbst keine Verbindung nach außen
+aufbauen (Abschnitt 4.7).
+
+Der Assistent ist bis zur Freigabe ausgeschaltet
+(`ASSISTANT_ENABLED=False`) und antwortet mit `503`. Er antwortet
+ebenfalls mit `503`, wenn einer der Dienste oder Claude nicht antwortet.
+Einrichtung in 3.16, Betrieb in 5.7.
 
 ### Komponenten
 
@@ -55,11 +83,15 @@ Portfolios, die Subdomain die komplette Coderr-Anwendung.
 | Server       | Hostinger VPS KVM 2, 2 vCPU, 8 GB RAM  |
 | Betriebssystem | Ubuntu 24.04 LTS (noble)             |
 | Webserver    | Nginx 1.24 (Ubuntu-Paket)              |
-| App-Server   | Gunicorn 26.0.0, 3 Worker, Unix-Socket |
+| App-Server   | Gunicorn 26.0.0, 3 Worker, Unix-Socket, Timeout 60 s |
 | Framework    | Django 6.0.6, DRF 3.17.1               |
 | Datenbank    | PostgreSQL 16, pgvector 0.6.0          |
 | Python       | 3.12.3                                 |
 | TLS          | Let's Encrypt via certbot, Auto-Renewal|
+| Embedding-Dienst | FastAPI und uvicorn, `intfloat/multilingual-e5-base`, `127.0.0.1:8002` |
+| Laya         | `laya-serve` 0.3.20, Checkpoint `multilingual`, `127.0.0.1:8001` |
+| PyTorch      | 2.14.0, CPU-Build, je ein venv pro Dienst |
+| Sprachmodell | Claude Haiku 4.5 über die Anthropic-API |
 
 ### URLs
 
@@ -67,6 +99,7 @@ Portfolios, die Subdomain die komplette Coderr-Anwendung.
 |-------------------------------------------------------------|------------------------------|
 | `https://benjaminblarr.de/`                                 | Portfolio (Angular)          |
 | `https://benjaminblarr.de/api/contact/`                     | Kontaktformular des Portfolios |
+| `https://benjaminblarr.de/api/assistant/`                   | Portfolio-Assistent, bis zur Freigabe `503` |
 | `https://benjaminblarr.de/join/`                            | Join (Angular, Hash-Routing) |
 | `https://benjaminblarr.de/pokedex/`                         | Pokédex (statisch)           |
 | `https://benjaminblarr.de/el-pollo-loco/`                   | El Pollo Loco (statisch)     |
@@ -88,6 +121,8 @@ Warum umgestellt wurde, steht in Abschnitt 7.
 └── coderr/
     ├── backend/                     Django-Repo
     │   ├── .venv/                   virtuelle Python-Umgebung
+    │   ├── embedding_service/.venv/ venv des Embedding-Dienstes
+    │   ├── laya_service/.venv/      venv von Laya
     │   ├── .env                     Secrets, Rechte 600, NICHT im Repo
     │   ├── staticfiles/             Ergebnis von collectstatic
     │   └── media/                   Uploads der Nutzer
@@ -98,6 +133,9 @@ Warum umgestellt wurde, steht in Abschnitt 7.
 /etc/nginx/sites-available/benjaminblarr-dev    Weiterleitung alte Domain
 /etc/nginx/snippets/projekte.conf               Projekt-Blöcke, eingebunden
 /etc/systemd/system/gunicorn-coderr.service     Dienstdefinition
+/etc/systemd/system/assistant-embedding.service Embedding-Dienst
+/etc/systemd/system/assistant-laya.service      Laya
+/var/lib/assistant/                             Home von "assistant", Modell-Cache
 /etc/ssh/sshd_config.d/00-hardening.conf        SSH-Absicherung
 /usr/local/bin/backup-coderr.sh                 tägliche Sicherung
 /var/backups/coderr/                            nächtliche Sicherungen, 14 Tage
@@ -501,6 +539,146 @@ HSTS wird im Browser gespeichert. Wird es aktiviert, bevor die
 Zertifikate stimmen, sperrt man sich und alle Besucher für die
 eingestellte Dauer aus. Zurücknehmen wirkt erst nach Ablauf der Zeit.
 
+### 3.16 Portfolio-Assistent
+
+Eingerichtet am 28.09.2026. Voraussetzung ist pgvector aus 3.8. Die
+Reihenfolge zählt: `deploy/deploy.sh` ruft bei jedem Deploy
+`build_index` auf und braucht dafür den laufenden Embedding-Dienst.
+
+#### Systembenutzer
+
+```bash
+sudo adduser --system --group --home /var/lib/assistant --shell /usr/sbin/nologin assistant
+sudo chmod 750 /var/lib/assistant
+```
+
+Die Dienste verarbeiten Text von Fremden mit großen Bibliotheken und
+brauchen weder die `.env` noch die Datenbank. Als `benni` könnte eine
+Lücke dort die `.env` lesen, als `assistant` nicht. Gegenprobe, beide
+Befehle müssen mit `Permission denied` scheitern:
+
+```bash
+sudo -u assistant cat /var/www/coderr/backend/.env
+sudo -u assistant ls /home/benni
+```
+
+`assistant` braucht Lesezugriff auf den Code, also `x` für andere auf
+jedem Ordner des Pfades. Prüfen mit
+`namei -l /var/www/coderr/backend/embedding_service/main.py`.
+
+#### Virtuelle Umgebungen
+
+Als `benni`, nie mit `sudo pip`. `assistant` darf den Code lesen und
+ausführen, aber nicht ändern.
+
+```bash
+cd /var/www/coderr/backend/embedding_service
+python3 -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install -r requirements.txt
+
+cd /var/www/coderr/backend/laya_service
+python3 -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install -r requirements.txt
+```
+
+Die `requirements.txt` beider Dienste wurden unter Windows mit Python
+3.14 eingefroren. Unter Linux mit 3.12 lösen sie trotzdem auf, geprüft
+mit `pip check` in beiden venvs und einem Import als `assistant`:
+
+```bash
+cd /var/www/coderr/backend
+sudo -u assistant embedding_service/.venv/bin/python -c "import torch, sentence_transformers; print(torch.__version__)"
+```
+
+Erwartet `2.14.0+cpu`. Platzbedarf 1,4 GB und 1,2 GB.
+
+#### Modelle einmal von Hand laden
+
+Die Units laufen mit `HF_HUB_OFFLINE=1` und finden die Modelle nur im
+Cache. Deshalb einmal im Vordergrund starten, in einem zweiten Fenster
+den Smoke-Test laufen lassen, dann mit `Strg+C` beenden:
+
+```bash
+cd /var/www/coderr/backend/embedding_service
+sudo -u assistant -H .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8002
+```
+
+```bash
+cd /var/www/coderr/backend
+sudo -u assistant -H env LAYA_HOST=127.0.0.1 LAYA_PORT=8001 LAYA_MODELS=multilingual LAYA_DEVICE=cpu laya_service/.venv/bin/laya-serve
+```
+
+```bash
+python3 embedding_service/smoke_test.py; echo "Exit: $?"
+python3 laya_service/smoke_test.py; echo "Exit: $?"
+sudo du -h -d 1 /var/lib/assistant/.cache/huggingface/hub
+```
+
+`-H` setzt `HOME` auf `/var/lib/assistant`, sonst landet der Download
+an einer Stelle, an die `assistant` nicht schreiben darf. `env` ist
+nötig, weil `sudo` die Umgebungsvariablen verwirft. Der Cache belegt
+1,7 GB in `hub/blobs`, die Modellordner enthalten nur Verweise.
+
+#### Dienste einrichten
+
+Die Unit-Dateien liegen im Repository unter `deploy/` und werden wie
+die Nginx-Dateien hochgeladen, nicht ins Terminal eingefügt. Neue
+Dateien vorher in VS Code auf `LF` stellen (Abschnitt 7).
+
+```powershell
+scp deploy/assistant-embedding.service deploy/assistant-laya.service vps:/tmp/
+```
+
+```bash
+file /tmp/assistant-embedding.service /tmp/assistant-laya.service
+sudo install -m 644 -o root -g root /tmp/assistant-embedding.service /tmp/assistant-laya.service /etc/systemd/system/
+systemd-analyze verify /etc/systemd/system/assistant-embedding.service /etc/systemd/system/assistant-laya.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now assistant-embedding assistant-laya
+```
+
+`file` muss `ASCII text` ohne `CRLF` melden. `verify` gibt im
+Erfolgsfall nichts aus. Nach dem Start dauert es 15 bis 50 Sekunden,
+bis die Modelle geladen sind, erst dann antworten die Smoke-Tests.
+
+#### `.env`, Index, Messung
+
+`ASSISTANT_ENABLED` und `ANTHROPIC_API_KEY` in die `.env` (Abschnitt
+4.1), mit `nano`, nicht mit `echo`: alles, was in der Shell getippt wird,
+landet in `~/.bash_history`. Dann:
+
+```bash
+cd /var/www/coderr/backend
+.venv/bin/python manage.py check
+.venv/bin/python manage.py build_index
+.venv/bin/python manage.py evaluate_retrieval 2>&1 | grep -v "HTTP Request" | tail -n 8
+.venv/bin/python manage.py evaluate_guard 2>&1 | grep -v "HTTP Request" | tail -n 4
+```
+
+Gemessen am 28.09.2026, identisch mit den lokalen Werten:
+52 Abschnitte aus 14 Dateien, 49 von 49 Fragen mit dem erwarteten
+Abschnitt unter den ersten drei, Laya erkennt 8 von 15 Angriffen bei 0
+von 49 Fehlalarmen. `build_index` dauert 27 Sekunden.
+
+Die ganze Kette lässt sich prüfen, ohne den Schalter umzulegen, siehe
+5.7.
+
+#### Gunicorn und Nginx
+
+Gunicorn bekommt `--timeout 60` (Abschnitt 4.2), Nginx einen Block für
+`/api/assistant` in `projekte.conf` und eine Sperre in der
+Coderr-Datei (4.4, 4.5). Danach von außen:
+
+```bash
+curl -s -X POST https://benjaminblarr.de/api/assistant/ -H 'Content-Type: application/json' -d '{"question": "Hallo"}' -w '\n%{http_code}\n'
+curl -s -o /dev/null -w '%{http_code}\n' -X POST https://coderr.benjaminblarr.de/api/assistant/
+```
+
+Erwartet `503` mit `{"detail":"Der Assistent ist gerade nicht
+verfügbar."}` und `404`.
+
 ---
 
 ## 4. Konfigurationsdateien
@@ -529,12 +707,29 @@ EMAIL_HOST_USER=<eigene Adresse>
 EMAIL_HOST_PASSWORD=<anwendungsspezifisches Passwort, nicht das Kontopasswort>
 DEFAULT_FROM_EMAIL=<dieselbe Adresse wie EMAIL_HOST_USER>
 CONTACT_RECIPIENT=<Zieladresse der Formularnachrichten>
+
+# Portfolio assistant. Stays off until stage 8.
+ASSISTANT_ENABLED=False
+ANTHROPIC_API_KEY=<Schlüssel "coderr-server" aus der Claude Console>
 ```
 
 Ohne gesetzte Variablen verhält sich das Projekt wie in der Entwicklung:
 `DEBUG=True`, CORS auf `localhost:5500`. Pflicht sind nur `SECRET_KEY` und
 `DB_NAME`, ohne sie startet Django nicht. Der Produktionsmodus entsteht
 ausschließlich durch diese Datei.
+
+`ASSISTANT_ENABLED=False` wäre ohne die Zeile auch der Fall. Sie steht
+trotzdem da, damit das Einschalten das Ändern eines sichtbaren Werts
+ist. `ANTHROPIC_API_KEY` ist ein eigener Schlüssel nur für den Server,
+getrennt vom lokalen: einzeln sperrbar, in der Console getrennt
+abgerechnet, mit eigener Laufzeit. Er steht nirgends sonst, auch nicht
+in den GitHub-Secrets, weil die CI ihn nicht braucht. Läuft er ab,
+antwortet der Assistent ohne weitere Warnung mit `503`, deshalb eine
+Erinnerung vor dem Ablaufdatum. Das Ausgabenlimit ist auf
+Organisationsebene in der Console gesetzt und gilt für beide
+Schlüssel. Die übrigen Einstellungen des Assistenten (Adressen der
+Dienste, Schwellen, Modellprofil) passen mit ihren Standardwerten, siehe
+`.env.example`.
 
 `benjaminblarr.de` muss in `ALLOWED_HOSTS` und den
 `CSRF_TRUSTED_ORIGINS` stehen bleiben, obwohl Coderr dort nicht mehr
@@ -554,6 +749,9 @@ Bildadresse aus der Angebotsliste ansehen, sie muss
 
 ### 4.2 `/etc/systemd/system/gunicorn-coderr.service`
 
+Seit dem 28.09.2026 im Repository als `deploy/gunicorn-coderr.service`.
+Die Kommentare stehen dort, hier nur die Einstellungen:
+
 ```ini
 [Unit]
 Description=Gunicorn daemon for Coderr backend
@@ -567,6 +765,7 @@ WorkingDirectory=/var/www/coderr/backend
 RuntimeDirectory=gunicorn
 ExecStart=/var/www/coderr/backend/.venv/bin/gunicorn \
     --workers 3 \
+    --timeout 60 \
     --bind unix:/run/gunicorn/coderr.sock \
     --umask 007 \
     --access-logfile - \
@@ -587,7 +786,33 @@ WantedBy=multi-user.target
 | `RuntimeDirectory=gunicorn` | systemd legt `/run/gunicorn` an und räumt auf |
 | `Restart=always` | Neustart nach Absturz |
 | `Requires=postgresql.service` | Datenbank startet vor der Anwendung |
+| `--timeout 60` | eine Anfrage an den Assistenten dauert im schlimmsten Fall gut 50 s |
 | `--access-logfile -` | Logs nach stdout, landen im systemd-Journal |
+
+Zum Timeout: Laya und der Embedding-Dienst haben im Client je 5 s,
+Claude 20 s mit einer Wiederholung. Hängt alles bis zum Timeout, sind
+das gut 50 s. Gunicorn beendet einen Worker, der länger als `--timeout`
+schweigt, der Standard sind 30 s, und Nginx antwortet dann mit `502`.
+Normal dauert eine Antwort rund 4 s.
+
+`--graceful-timeout` bleibt bei 30 s. Er gilt nur beim Neuladen per
+`HUP`, also bei jedem Deploy, und schneidet dort nur eine Anfrage ab,
+die schon länger als 30 s läuft. Wer ihn erhöht, muss auch die
+Warteschleife in `reload_gunicorn` in `deploy/deploy.sh` verlängern,
+die mit 40 s auf den 30 s aufbaut.
+
+Nach einer Änderung an `ExecStart` reicht `HUP` nicht. Der Master
+startet dabei neue Worker mit seinen alten Argumenten, die neuen bekommt
+nur ein neuer Master:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart gunicorn-coderr
+ps -o args= -p "$(systemctl show -p MainPID --value gunicorn-coderr)"
+```
+
+Die letzte Zeile zeigt die Befehlszeile, mit der Gunicorn wirklich
+läuft.
 
 ### 4.3 `/etc/nginx/sites-available/benjaminblarr`
 
@@ -656,6 +881,10 @@ server {
     access_log /var/log/nginx/coderr.access.log;
     error_log  /var/log/nginx/coderr.error.log;
 
+    location /api/assistant {
+        return 404;
+    }
+
     location /api/ {
         proxy_pass http://unix:/run/gunicorn/coderr.sock;
         proxy_set_header Host $host;
@@ -707,6 +936,12 @@ Wichtige Punkte:
 - `X-Forwarded-Proto $scheme` wird von `SECURE_PROXY_SSL_HEADER` in den
   Django-Einstellungen gelesen. Ohne diesen Header hält Django jede
   Anfrage für unverschlüsselt und erzeugt `http://`-Links.
+- `location /api/assistant` sperrt den Portfolio-Assistenten auf der
+  Subdomain. Ohne den Block wäre er hier über `location /api/` ebenfalls
+  erreichbar, mit dem Standard-Timeout von Nginx und in einer anderen
+  Logdatei. Der Block gewinnt, weil sein Präfix länger ist als `/api/`.
+  Die aktuelle Fassung inklusive der Zeilen von certbot liegt im
+  Repository unter `deploy/nginx-coderr.conf`.
 
 ### 4.5 `/etc/nginx/snippets/projekte.conf`
 
@@ -718,41 +953,16 @@ Eingebunden im HTTPS-`server`-Block mit:
 include /etc/nginx/snippets/projekte.conf;
 ```
 
+Die vollständige Datei liegt im Repository unter
+`deploy/nginx-projekte.conf`: Weiterleitungen für Coderr, die statischen
+Projekte (El Pollo Loco, Pokédex, BestellApp, Book-Store, Join, die
+Architekturseite von Cardelia) samt ihren Cache-Regeln und die beiden
+Blöcke, die Django erreichen. Bis zum 28.09.2026 stand hier eine
+vollständige Abschrift, die hinter dem Server zurückgefallen war
+(Abschnitt 7). Deshalb steht hier nur noch der Teil, der Django
+betrifft:
+
 ```nginx
-# Coderr liegt seit dem 29.07.2026 auf einer eigenen Subdomain.
-# Die alten Adressen bleiben dauerhaft gueltig.
-location = /coderr {
-    return 301 https://coderr.benjaminblarr.de/;
-}
-
-location /coderr/ {
-    rewrite ^/coderr/(.*)$ https://coderr.benjaminblarr.de/$1 permanent;
-}
-
-# Adressen ohne abschliessenden Schraegstrich auf die Variante mit umleiten
-location = /join          { return 301 /join/; }
-location = /pokedex       { return 301 /pokedex/; }
-location = /el-pollo-loco { return 301 /el-pollo-loco/; }
-
-location /el-pollo-loco/ {
-    alias /var/www/el-pollo-loco/;
-    index index.html;
-    try_files $uri $uri/ =404;
-}
-
-location /pokedex/ {
-    alias /var/www/pokedex/;
-    index index.html;
-    try_files $uri $uri/ =404;
-}
-
-location /join/ {
-    alias /var/www/join/;
-    index index.html;
-    try_files $uri $uri/ /join/index.html;
-}
-
-# Kontaktformular des Portfolios, beantwortet von Django
 location /api/contact {
     proxy_pass http://unix:/run/gunicorn/coderr.sock;
     proxy_set_header Host $host;
@@ -760,7 +970,33 @@ location /api/contact {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 }
+
+location /api/assistant {
+    proxy_pass http://unix:/run/gunicorn/coderr.sock;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 65s;
+}
 ```
+
+Vor jedem Hochladen die Server-Fassung mit der aus dem Repository
+vergleichen und erst einspielen, wenn `diff` nur die gewollte Änderung
+zeigt. Die alte Fassung vorher sichern, damit ein Fehler in `nginx -t`
+sofort rückgängig gemacht werden kann:
+
+```bash
+diff /etc/nginx/snippets/projekte.conf /tmp/nginx-projekte.conf
+sudo cp /etc/nginx/snippets/projekte.conf /tmp/projekte.conf.bak
+sudo install -m 644 -o root -g root /tmp/nginx-projekte.conf /etc/nginx/snippets/projekte.conf
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+`proxy_read_timeout 65s` liegt knapp über dem Gunicorn-Timeout von
+60 s. Hängt eine Anfrage, beendet Gunicorn sie zuerst und schreibt
+`WORKER TIMEOUT` ins Journal. So steht die Ursache dort, wo man bei
+einem `502` ohnehin zuerst sucht (5.2).
 
 Die `location =` Blöcke sind exakte Übereinstimmungen und werden von
 Nginx vor allen Prefix-Blöcken geprüft. Warum sie nötig sind, steht in
@@ -774,11 +1010,11 @@ passt nicht auf `location /coderr/` und braucht deshalb den eigenen
 exakten Block. `permanent` entspricht `301`, Browser und Suchmaschinen
 merken sich das dauerhaft.
 
-Beim Kontakt-Block steht hinter dem Socket **kein** Pfad. Dadurch reicht
-Nginx die Adresse unverändert weiter und Django sieht `/api/contact/`.
-Der Header `X-Real-IP` ist hier keine Kosmetik: die
-Ratenbegrenzung des Endpunkts liest ihn aus, um Absender zu
-unterscheiden. Ohne ihn käme jede Anfrage scheinbar von `127.0.0.1` und
+Bei den beiden Django-Blöcken steht hinter dem Socket **kein** Pfad.
+Dadurch reicht Nginx die Adresse unverändert weiter und Django sieht
+`/api/contact/` und `/api/assistant/`. Der Header `X-Real-IP` ist hier
+keine Kosmetik: die Ratenbegrenzung beider Endpunkte liest ihn aus, um
+Absender zu unterscheiden. Ohne ihn käme jede Anfrage scheinbar von `127.0.0.1` und
 das Limit würde für alle Besucher gemeinsam gelten.
 
 Der Unterschied beim Rückfall: Join ist eine Angular-Anwendung und
@@ -801,6 +1037,51 @@ server {
 }
 ```
 
+### 4.7 `/etc/systemd/system/assistant-embedding.service` und `assistant-laya.service`
+
+Beide Dateien liegen im Repository unter `deploy/`, mit Kommentaren zu
+den nicht offensichtlichen Zeilen. Sie sind bis auf Pfade und
+Umgebungsvariablen gleich gebaut:
+
+| Zeile | Zweck |
+|---|---|
+| `StartLimitIntervalSec=300`, `StartLimitBurst=5` | nach fünf Fehlstarts in fünf Minuten aufgeben, statt PyTorch endlos neu zu laden |
+| `User=assistant` | eigener Benutzer ohne Zugriff auf `.env` und `/home` (3.16) |
+| `Environment=HF_HUB_OFFLINE=1` | Start nur aus dem Modell-Cache: keine Abhängigkeit von Hugging Face, kein stilles Modell-Update |
+| `Environment=LAYA_…` | nur Laya: `127.0.0.1`, Port 8001, nur Checkpoint `multilingual`, CPU |
+| `Restart=on-failure`, `RestartSec=5` | Neustart nach Absturz oder Abschuss, nicht nach `systemctl stop` |
+| `MemoryMax=3G` | Obergrenze je Dienst, damit der Kernel bei Speichermangel diesen Dienst beendet und nicht PostgreSQL |
+| `MemorySwapMax=0` | lieber Neustart als ein Modell im Swap, bei dem jede Anfrage in den Timeout läuft |
+| `ProtectSystem=strict` | ganzes Dateisystem schreibgeschützt, auch der eigene Modell-Cache |
+| `IPAddressDeny=any`, `IPAddressAllow=localhost` | Verbindungen nur mit `127.0.0.1`, in beide Richtungen |
+| übrige `Protect…`, `Restrict…`, `Private…` | Abschottung vom Kernel, von Geräten und anderen Prozessen |
+
+Bewusst **nicht** gesetzt:
+
+- `After=network.target`: Die Dienste reden nur über `127.0.0.1`, und
+  diese Schnittstelle richtet systemd beim Hochfahren als Erstes ein.
+- Eine Abhängigkeit zu `gunicorn-coderr`, in keine Richtung. Coderr
+  soll weiterlaufen, wenn ein Modell-Dienst ausfällt. Django antwortet
+  dann für den Assistenten mit `503`.
+- `MemoryDenyWriteExecute`: oneDNN in PyTorch erzeugt zur Laufzeit
+  Maschinencode, genau das verbietet die Option.
+
+`systemd-analyze security` bewertet beide Units mit **2.7 OK**,
+`gunicorn-coderr` zum Vergleich mit 9.2 UNSAFE.
+
+Speicher, kalt gemessen am 28.09.2026 (Messverfahren in 5.7):
+
+| Dienst | nach dem Start | Spitze |
+|---|---|---|
+| Embedding | 1,0 G | 1,9 G bei `build_index` |
+| Laya | 2,4 G | 2,4 G, unter Last unverändert |
+
+Beim Embedding-Dienst ist die Reserve größer. Der längste Abschnitt der
+Wissensbasis hat 310 Tokens, das Modell nimmt bis 512, und der Speicher
+für die Attention wächst quadratisch mit der Länge. Zusammen dürfen die
+beiden Dienste 6 GB belegen, mit den 0,7 GB für den Rest bleibt der
+Server unter 7,9 GB.
+
 ---
 
 ## 5. Regelmäßiger Betrieb
@@ -813,16 +1094,35 @@ und `Tests` grün, schickt der Job `Deploy` das Skript `deploy/deploy.sh`
 per SSH an den Server. Das Skript
 
 1. bricht ab, wenn auf dem Server versionierte Dateien geändert wurden,
-2. sichert die Datenbank nach `~/backups/coderr/` (siehe 5.5),
-3. setzt den Code mit `git merge --ff-only` auf genau den geprüften Commit,
-4. führt `pip install`, `check`, `migrate` und `collectstatic` aus,
-5. lädt Gunicorn per `HUP` neu, ohne laufende Anfragen abzubrechen.
+2. listet geänderte Dateien, neue Migrationen, Änderungen an
+   `requirements.txt` und an den Diensten des Assistenten,
+3. sichert die Datenbank nach `~/backups/coderr/` (siehe 5.5),
+4. setzt den Code mit `git merge --ff-only` auf genau den geprüften Commit,
+5. führt `pip install`, `check`, `migrate` und `collectstatic` aus,
+6. lädt Gunicorn per `HUP` neu, ohne laufende Anfragen abzubrechen,
+7. baut den Wissensindex des Assistenten neu (`build_index`).
 
 Danach prüft der Job von außen, ob `/api/base-info/` JSON und eine
 statische Datei CSS liefert.
 
-Schritt 4 läuft bei jedem Deploy, auch ohne Änderung. Scheitert ein
-Deploy nach dem Merge, holt **Re-run jobs** ihn deshalb vollständig nach.
+Die Schritte 5 bis 7 laufen bei jedem Deploy, auch ohne Änderung.
+Scheitert ein Deploy nach dem Merge, holt **Re-run jobs** ihn deshalb
+vollständig nach. Für den Index ist das der Grund, ihn jedes Mal zu
+bauen und nicht nur bei Änderungen unter `knowledge/`: Ein Re-run sähe
+keine Änderung mehr, und der Index bliebe ohne Meldung auf dem alten
+Stand.
+
+`build_index` steht bewusst nach dem Neuladen. Läuft der
+Embedding-Dienst nicht, ist Coderr trotzdem schon ausgerollt. Der Job
+wird rot, der alte Index bleibt erhalten, weil `build_index` erst alles
+berechnet und dann in einer Transaktion austauscht, und ein Re-run
+holt den Index nach, sobald der Dienst wieder läuft. Das kostet jeden
+Deploy rund 27 Sekunden.
+
+Die Dienste selbst kann `deploy.sh` nicht aktualisieren, dafür bräuchte
+der Deploy-Schlüssel `sudo`. Steht im Log unter
+`--- Changes to the assistant services ---` eine Datei, ist Handarbeit
+nötig (5.7).
 
 Nur wenn GitHub Actions nicht verfügbar ist, von Hand vom Arbeitsrechner
 in **Git Bash** (PowerShell 5.1 kennt die Umleitung mit `<` nicht), im
@@ -859,7 +1159,14 @@ sudo tail -f /var/log/nginx/coderr.access.log
 
 # Datenbank
 sudo journalctl -u postgresql -n 50 --no-pager
+
+# Dienste des Assistenten, beide zusammen
+sudo journalctl -u assistant-embedding -u assistant-laya -n 50 --no-pager
 ```
+
+Fehler des Assistenten selbst stehen im Gunicorn-Log, jeweils mit
+`Assistent:` am Anfang. Dort stehen die Laya-Werte einer abgelehnten
+Frage und die Tokens einer Antwort, nie der Fragetext.
 
 Bei einem `502 Bad Gateway` liegt die Ursache fast immer in
 `journalctl -u gunicorn-coderr`, nicht im Nginx-Log.
@@ -871,7 +1178,14 @@ sudo systemctl restart gunicorn-coderr    # Anwendung neu starten
 sudo systemctl reload nginx               # Nginx-Konfiguration neu laden
 sudo nginx -t                             # Konfiguration prüfen
 systemctl is-active nginx postgresql gunicorn-coderr
+systemctl is-active assistant-embedding assistant-laya
+sudo systemctl restart assistant-embedding assistant-laya
 ```
+
+Nach einem Neustart brauchen die Dienste des Assistenten 15 bis 50
+Sekunden, bis die Modelle geladen sind. So lange antwortet der
+Assistent mit `503`. `systemctl status` zeigt schon vorher
+`active (running)`, weil systemd nur den Prozess sieht, nicht das Modell.
 
 `reload` vor `restart` bevorzugen, wo möglich. `reload` unterbricht
 bestehende Verbindungen nicht.
@@ -1118,6 +1432,143 @@ einmalig angelegt werden:
 .venv/bin/python manage.py createcachetable
 ```
 
+### 5.7 Portfolio-Assistent
+
+Alle Befehle in `/var/www/coderr/backend`.
+
+#### Einschalten und ausschalten
+
+In der `.env` `ASSISTANT_ENABLED=True` oder `False` setzen, dann:
+
+```bash
+sudo systemctl reload gunicorn-coderr
+```
+
+`reload` genügt: Gunicorn lädt die App erst in den Workern, und die
+neuen Worker lesen die `.env` beim Start neu ein. Das gilt für jede
+Änderung an der `.env`, auch für einen neuen API-Schlüssel. Ohne
+`reload` arbeiten die laufenden Worker mit den alten Werten weiter.
+
+#### Die Kette prüfen, ohne einzuschalten
+
+Schickt eine echte Frage durch Throttle, Laya, Suche, Schwelle und
+Claude, aber nur in diesem einen Prozess. Von außen bleibt es bei
+`503`. Kostet rund 0,3 Cent.
+
+```bash
+.venv/bin/python manage.py shell <<'EOF'
+import json, time
+from django.test import override_settings
+from rest_framework.test import APIClient
+
+question = {'question': 'Welche Projekte hat Benjamin mit Django gebaut?', 'lang': 'de'}
+start = time.perf_counter()
+with override_settings(ASSISTANT_ENABLED=True):
+    response = APIClient().post('/api/assistant/', question, format='json', HTTP_HOST='benjaminblarr.de')
+
+print(response.status_code, f'{time.perf_counter() - start:.1f} s')
+print(json.dumps(response.json(), ensure_ascii=False, indent=2))
+EOF
+```
+
+`HTTP_HOST` ist nötig, weil `ALLOWED_HOSTS` gesetzt ist. Am 28.09.2026:
+`200` in 3,9 s, davon 3,3 s bei Claude. Ohne Kosten prüft man nur den
+Schlüssel, denn das Abfragen der Modellliste kostet nichts:
+
+```bash
+.venv/bin/python manage.py shell -c "import anthropic; from django.conf import settings; print([m.id for m in anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY).models.list(limit=3)])"
+```
+
+#### Index und Messungen
+
+```bash
+.venv/bin/python manage.py build_index
+.venv/bin/python manage.py evaluate_retrieval 2>&1 | grep -v "HTTP Request" | tail -n 8
+.venv/bin/python manage.py evaluate_guard 2>&1 | grep -v "HTTP Request" | tail -n 4
+python3 embedding_service/smoke_test.py; echo "Exit: $?"
+python3 laya_service/smoke_test.py; echo "Exit: $?"
+```
+
+`build_index` läuft ohnehin bei jedem Deploy. Die Werte vom 28.09.2026
+stehen in 3.16.
+
+#### Dienste aktualisieren
+
+Wenn das Deploy-Log unter `--- Changes to the assistant services ---`
+Dateien nennt, nach dem Deploy von Hand:
+
+```bash
+embedding_service/.venv/bin/pip install -r embedding_service/requirements.txt
+sudo systemctl restart assistant-embedding
+```
+
+Für Laya entsprechend mit `laya_service` und `assistant-laya`. Danach
+die Smoke-Tests. Wechselt das Modell selbst, zum Beispiel ein anderes
+`MODEL_NAME` im Embedding-Dienst, findet der Dienst es wegen
+`HF_HUB_OFFLINE=1` nicht im Cache und startet nicht. Das neue Modell
+dann erst wie in 3.16 von Hand laden. Nach einem neuen Embedding-Modell
+außerdem `build_index` und `evaluate_retrieval`, weil sich alle Werte
+und damit die Schwelle verschieben.
+
+#### Unit-Dateien ändern
+
+Hochladen und vergleichen wie bei Nginx (4.5), dann:
+
+```bash
+sudo install -m 644 -o root -g root /tmp/assistant-embedding.service /tmp/assistant-laya.service /etc/systemd/system/
+systemd-analyze verify /etc/systemd/system/assistant-embedding.service /etc/systemd/system/assistant-laya.service
+sudo systemctl daemon-reload
+sudo systemctl restart assistant-embedding assistant-laya
+```
+
+`daemon-reload` liest die Dateien nur neu ein. Abschottung und
+Speichergrenzen baut systemd beim Start eines Prozesses auf, deshalb
+der `restart`. Kontrolle mit
+`systemctl show -p MemoryMax -p MemorySwapMax assistant-embedding assistant-laya`
+und `systemd-analyze security --no-pager | grep assistant`.
+
+#### Speicher messen
+
+Die Zeile `Memory:` in `systemctl status` zählt auch Dateien, die der
+Dienst gelesen hat und die im Page Cache liegen. Angerechnet werden sie
+dem Prozess, der sie **zuerst** gelesen hat. Hat vorher eine SSH-Sitzung
+oder eine frühere Instanz des Dienstes die Modelldateien gelesen, zeigt
+der Dienst zu wenig an. Für einen verlässlichen Wert, etwa vor einer
+Änderung an `MemoryMax=`, kalt messen:
+
+```bash
+sudo systemctl stop assistant-embedding assistant-laya
+sync; echo 1 | sudo tee /proc/sys/vm/drop_caches
+sudo systemctl start assistant-embedding assistant-laya
+```
+
+Eine Minute warten, dann `build_index` und `evaluate_guard` als Last
+und `systemctl status … | grep Memory` lesen. `drop_caches` leert nur
+den Page Cache und ist harmlos, danach lesen alle Programme ein paar
+Sekunden lang etwas langsamer. `sudo tee` statt `sudo echo … >`, weil
+die Umleitung sonst von der eigenen Shell ohne Root-Rechte ausgeführt
+wird.
+
+#### Einen Absturz nachstellen
+
+```bash
+sudo kill -KILL "$(systemctl show -p MainPID --value assistant-laya)"
+sleep 8
+sudo journalctl -u assistant-laya -n 6 --no-pager
+```
+
+Erwartet `Failed with result 'signal'`, 5 Sekunden später
+`Scheduled restart job` und eine neue PID. `systemctl kill -s KILL`
+meldet unter Ubuntu 24.04 einen Fehler (Abschnitt 7).
+
+#### API-Schlüssel erneuern
+
+1. In der Claude Console einen neuen Schlüssel anlegen.
+2. In der `.env` mit `nano` austauschen, dann
+   `sudo systemctl reload gunicorn-coderr`.
+3. Mit der Modellliste oben prüfen.
+4. Den alten Schlüssel in der Console löschen.
+
 ---
 
 ## 6. Fehlersuche
@@ -1139,6 +1590,12 @@ einmalig angelegt werden:
 | Kontaktformular antwortet mit 400 | `benjaminblarr.de` aus `ALLOWED_HOSTS` entfernt | `grep ALLOWED_HOSTS .env`, Hauptdomain muss drinbleiben |
 | Bildadressen enthalten `/coderr` | `FORCE_SCRIPT_NAME` noch gesetzt | `grep FORCE_SCRIPT_NAME .env`, Zeile muss weg |
 | Seite lädt sehr langsam | Speicher voll, System swappt | `free -h`, `top` |
+| Assistent antwortet `503` | Schalter aus, ein Dienst lädt noch oder läuft nicht, Claude nicht erreichbar oder Schlüssel ungültig | `grep ASSISTANT_ENABLED .env`, `systemctl is-active assistant-embedding assistant-laya`, `journalctl -u gunicorn-coderr` nach `Assistent:` |
+| Assistent antwortet `502` | Anfrage länger als der Gunicorn-Timeout, Worker beendet | `journalctl -u gunicorn-coderr` nach `WORKER TIMEOUT`, `--timeout` mit `ps` prüfen (4.2) |
+| Assistent auf der Subdomain `404` | gewollt, Zugang nur über `benjaminblarr.de` | Abschnitt 4.4 |
+| Deploy rot bei `build_index` | Embedding-Dienst läuft nicht oder lädt noch | `systemctl status assistant-embedding`, dann **Re-run jobs** |
+| Dienst des Assistenten startet nicht mehr | Startlimit erreicht (`start-limit-hit`), meist Modell nicht im Cache oder Rechte | Journal lesen, Ursache beheben, dann `sudo systemctl reset-failed <dienst>` und `start` |
+| Dienst des Assistenten startet immer wieder neu | `MemoryMax=` erreicht, im Journal `oom-kill` | Speicher kalt messen (5.7), Grenze anpassen |
 
 ### Wichtigste Diagnosebefehle
 
@@ -1269,6 +1726,48 @@ Reihenfolge bei so einer Umstellung, damit nie eine Lücke entsteht:
 6. Erst jetzt die alten Blöcke durch die Weiterleitung ersetzen
 7. Links im Portfolio anpassen, neu bauen, hochladen
 
+**Abschrift der Nginx-Datei veraltet.** Vor den Änderungen für den
+Assistenten zeigte ein `diff` zwischen `/etc/nginx/snippets/projekte.conf`
+und `deploy/nginx-projekte.conf`, dass der Server weiter war: Cardelia
+und die Cache-Regeln für Join und El Pollo Loco waren direkt auf dem
+Server ergänzt worden, das Repository kannte sie nicht. Die Datei aus
+dem Repository zu ändern und hochzuladen hätte diese Blöcke still
+gelöscht. Konsequenz: vor jeder Änderung an einer Server-Datei erst
+`diff`, bei Abweichung die Server-Fassung ins Repository holen und
+getrennt committen, dann ändern. Die Abschrift in Abschnitt 4.5 ist
+seitdem durch einen Verweis auf die Datei im Repository ersetzt.
+
+**Zeilenenden neuer Dateien.** Die `.gitattributes` sorgt für LF in
+allem, was Git speichert und auscheckt. Eine neu angelegte Datei liegt
+aber bis dahin so auf der Platte, wie der Editor sie geschrieben hat,
+unter Windows mit CRLF, und `scp` lädt genau diese Fassung hoch. systemd
+hätte `User=assistant\r` gelesen, einen Benutzer mit unsichtbarem
+Zeichen am Ende. Konsequenz: neue Dateien in VS Code unten rechts auf
+`LF` stellen und auf dem Server mit `file` prüfen, erwartet ist
+`ASCII text` ohne `with CRLF line terminators`.
+
+**`sudo` mit `*` oder `>`.** `sudo du -sh /var/lib/assistant/…/*` fand
+nichts, obwohl die Dateien da waren. Den Stern löst die eigene Shell
+auf, bevor `sudo` startet, und `benni` darf den Ordner nicht lesen.
+Dasselbe gilt für `sudo echo 1 > /proc/…`: Die Umleitung macht die
+eigene Shell ohne Root-Rechte. Abhilfe: Befehle ohne Stern (`du -d 1`)
+und `| sudo tee` statt `>`.
+
+**Speicheranzeige zu niedrig.** Nach dem ersten Start zeigte
+`systemctl status` 680 MB und 1,5 GB, kalt gemessen waren es 1,9 GB und
+2,4 GB. Die Modelldateien lagen noch im Page Cache und waren der
+SSH-Sitzung angerechnet, aus der die Modelle zuerst geladen worden
+waren. Hätte `MemoryMax=` auf den ersten Zahlen beruht, wäre ein Dienst
+nach dem nächsten Neustart des Servers an seiner Grenze gescheitert.
+Messverfahren in 5.7.
+
+**`systemctl kill -s KILL` scheitert.** Unter Ubuntu 24.04 mit systemd
+255 meldet der Befehl `Failed to send signal SIGKILL to auxiliary
+processes: Invalid argument`, bekannt aus anderen Projekten
+([nerdctl #3147](https://github.com/containerd/nerdctl/issues/3147)).
+Der Hauptprozess wurde trotzdem beendet und neu gestartet. Für Tests
+`kill -KILL` mit der PID aus `systemctl show -p MainPID --value`.
+
 **Secret Key in der Git-Historie.** Der von `startproject` erzeugte
 Schlüssel steckte im ersten Commit. Beim Öffentlichmachen eines Repos
 wird die gesamte Historie lesbar, nicht nur der aktuelle Stand. Prüfen
@@ -1293,6 +1792,36 @@ Für die Zukunft: Secret Key ab dem ersten Commit in die `.env`.
       `sites-enabled` und das Zertifikat für `benjaminblarr.dev` vom
       Server entfernen. Sonst versucht certbot weiter, ein Zertifikat
       für eine Domain zu erneuern, die es nicht mehr gibt
+- [ ] Portfolio-Assistent einschalten (5.7), zusammen mit dem Widget
+      im Portfolio und dem Hinweis in dessen Datenschutzerklärung
+- [ ] Ratenbegrenzung: Die Schlüssel in `django_cache` enthalten die IP
+      im Klartext, und Djangos Datenbank-Cache löscht abgelaufene
+      Einträge erst ab mehr als 300 Einträgen. Bei wenig Besuch bleiben
+      IPs also liegen und landen in den Sicherungen. Betrifft auch das
+      Kontaktformular. Abgelaufene Zeilen regelmäßig löschen und die
+      Tabelle aus den Sicherungen nehmen
+      (`pg_dump --exclude-table-data=django_cache`). Vor dem Einschalten
+      des Assistenten erledigen
+- [ ] Ablaufdatum des API-Schlüssels `coderr-server` im Kalender
+      vormerken
+- [ ] Deutsche Kommentare in `deploy/nginx-projekte.conf` übersetzen,
+      dann hochladen wie in 4.5
+- [ ] Optional: `gunicorn-coderr` genauso abschotten wie die Dienste des
+      Assistenten (`systemd-analyze security`: 9.2 UNSAFE)
+- [ ] Optional: `staticfiles/` in die `.gitignore`, damit `git status`
+      auf dem Server ganz leer ist
+
+### Erledigt am 28.09.2026
+
+- [x] Portfolio-Assistent eingerichtet, noch ausgeschaltet (3.16):
+      Systembenutzer `assistant`, zwei abgeschottete Dienste mit
+      Speichergrenze, Modelle im Cache, Index gebaut, Messwerte wie lokal
+- [x] Gunicorn-Timeout 60 s, Unit-Datei ins Repository
+- [x] Nginx: `/api/assistant` auf der Hauptdomain, Sperre auf der
+      Subdomain, Server-Fassung von `projekte.conf` ins Repository geholt
+- [x] `deploy.sh` baut den Index bei jedem Deploy neu und listet
+      Änderungen an den Diensten
+- [x] Eigener API-Schlüssel für den Server
 
 ### Erledigt am 26.09.2026
 

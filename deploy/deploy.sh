@@ -102,6 +102,8 @@ echo "--- New migration files ---"
 git diff --name-only --diff-filter=A HEAD "$sha" -- '*/migrations/*.py'
 echo "--- Changes to requirements.txt ---"
 git diff HEAD "$sha" -- requirements.txt
+echo "--- Changes to the assistant services (install and restart by hand) ---"
+git diff --name-only HEAD "$sha" -- embedding_service laya_service
 
 backup_database
 
@@ -115,4 +117,9 @@ echo "Code is now at $(git log --oneline -1 HEAD)"
 .venv/bin/python manage.py migrate --noinput
 .venv/bin/python manage.py collectstatic --noinput
 reload_gunicorn
+
+# Rebuilt on every deployment, like the steps above, so that re-running
+# a failed job also repairs the index. It runs after the reload because
+# a broken embedding service must not hold back the rest of the release.
+.venv/bin/python manage.py build_index
 echo "Deployment finished."
