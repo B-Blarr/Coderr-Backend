@@ -14,7 +14,6 @@ class ContactMessage(models.Model):
     email = models.EmailField()
     message = models.TextField(max_length=2500)
     created_at = models.DateTimeField(auto_now_add=True)
-    ip_address = models.GenericIPAddressField(null=True, blank=True)
     mail_sent = models.BooleanField(default=False)
 
     class Meta:
