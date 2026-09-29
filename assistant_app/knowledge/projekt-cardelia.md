@@ -22,7 +22,7 @@ gehen.
 Cardelia trennt zwei Ebenen, die oft verwechselt werden.
 
 **Django ist das Backend.** Dort liegen die Domänenlogik, die API und die
-Hintergrundjobs — also alles, was Cardelia inhaltlich ausmacht.
+Hintergrundjobs, also alles, was Cardelia inhaltlich ausmacht.
 
 **Supabase ist Infrastruktur, kein Backend.** Es liefert PostgreSQL,
 Authentifizierung und Objektspeicher als gemanagten Dienst. Diese Bestandteile
@@ -57,7 +57,7 @@ fallen unterschiedlich oft aus.
 
 Bei den Ausbildungsprojekten war der Stack vorgegeben. Cardelia ist die
 Ausnahme: Hier hat Benjamin selbst entschieden, was er einsetzt und wie er es
-zuschneidet — und muss diese Entscheidungen entsprechend auch selbst
+zuschneidet. Entsprechend muss er diese Entscheidungen auch selbst
 verantworten.
 
 Es ist außerdem das Projekt, das am längsten läuft und dadurch Fragen aufwirft,

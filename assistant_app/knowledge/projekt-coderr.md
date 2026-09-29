@@ -21,16 +21,16 @@ Quelltext liegt öffentlich auf GitHub.
 
 Coderr ist in sechs Django-Apps aufgeteilt, jede mit einem eigenen Bereich für
 die Schnittstelle: Serializer, Views, URLs und Berechtigungen liegen getrennt
-voneinander. Der Zuschnitt folgt der Fachlichkeit — Anmeldung, Angebote,
-Bestellungen, Bewertungen — statt alles in eine große Anwendung zu legen.
+voneinander. Der Zuschnitt folgt der Fachlichkeit (Anmeldung, Angebote,
+Bestellungen, Bewertungen), statt alles in eine große Anwendung zu legen.
 
 Die API ist über drf-spectacular dokumentiert und lässt sich als Swagger-
 Oberfläche aufrufen.
 
 Die Standardeinstellung für Berechtigungen ist bewusst geschlossen: Jeder
 Endpunkt verlangt zunächst eine Anmeldung, und öffentliche Endpunkte müssen das
-ausdrücklich erlauben. Der umgekehrte Weg — alles offen, einzelne Endpunkte
-abgesichert — verzeiht keinen Fehler, weil ein vergessener Endpunkt dann offen
+ausdrücklich erlauben. Der umgekehrte Weg, alles offen und einzelne Endpunkte
+abgesichert, verzeiht keinen Fehler, weil ein vergessener Endpunkt dann offen
 steht statt zu.
 
 ## Das Kontaktformular des Portfolios läuft über Coderr
@@ -52,7 +52,7 @@ kann. Der Unterschied entscheidet darüber, ob die Begrenzung überhaupt wirkt.
 Die Nachricht wird zuerst gespeichert und erst danach als E-Mail verschickt. Ist
 der Mailversand gestört, ist die Nachricht trotzdem da. Als Absender steht dabei
 Benjamins eigene Adresse, die Adresse des Besuchers steht in der
-Antwort-an-Angabe — eine fremde Adresse als Absender zu setzen, lässt Mails in
+Antwort-an-Angabe. Eine fremde Adresse als Absender zu setzen, lässt Mails in
 Spamfiltern hängen.
 
 ## Warum der Zwischenspeicher in der Datenbank liegt
@@ -63,7 +63,7 @@ richtige Wahl.
 
 Der Grund liegt in der Zählung der Anfragen pro Absender. Die Anwendung läuft
 mit mehreren Arbeitsprozessen nebeneinander. Läge der Zähler im Arbeitsspeicher,
-hätte jeder Prozess seinen eigenen — bei drei Prozessen dürfte derselbe Absender
+hätte jeder Prozess seinen eigenen. Bei drei Prozessen dürfte derselbe Absender
 das Dreifache des erlaubten Limits verschicken, weil keiner von den anderen
 weiß. Erst ein gemeinsamer Speicher macht die Begrenzung zu einer echten
 Begrenzung.

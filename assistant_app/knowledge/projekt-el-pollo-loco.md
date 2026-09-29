@@ -17,8 +17,8 @@ Das Spiel ist unter benjaminblarr.de/el-pollo-loco spielbar, der Quelltext liegt
 
 Interessant an dem Projekt ist weniger das Spiel selbst als der Aufbau
 dahinter. Es besteht aus 24 Klassen, von denen 17 eine gemeinsame Basisklasse
-erweitern. Alles, was sich bewegt — die Spielfigur, die Gegner, die Flaschen,
-die Wolken — erbt von dieser einen Klasse, die weiß, wo sie sich befindet, wie
+erweitern. Alles, was sich bewegt (die Spielfigur, die Gegner, die Flaschen,
+die Wolken), erbt von dieser einen Klasse, die weiß, wo sie sich befindet, wie
 groß sie ist und wie sie sich zeichnet.
 
 Darüber läuft eine einzige Schleife, die das Bild viele Male pro Sekunde leert

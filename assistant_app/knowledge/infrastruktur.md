@@ -70,7 +70,7 @@ Ausrollen fällt dadurch sofort auf, statt unbemerkt zu bleiben.
 Die Fehler, die im Betrieb auftreten, sind andere als die beim Entwickeln. Ein
 Beispiel: Nach dem Hochladen von Dateien kamen Unterordner mit zu engen Rechten
 auf dem Server an. Der Webserver durfte sie nicht betreten und lieferte
-daraufhin für Bilder und Sprachdateien die Startseite aus — mit dem Statuscode
+daraufhin für Bilder und Sprachdateien die Startseite aus, mit dem Statuscode
 200 und ohne jede Fehlermeldung. Die Seite sah funktionierend aus und war es
 nicht.
 

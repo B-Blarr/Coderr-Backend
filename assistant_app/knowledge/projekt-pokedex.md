@@ -22,7 +22,7 @@ Abrufe auflösen.
 
 Gleichzeitig müssen Liste, Suche und Detailansicht bedienbar bleiben, während
 im Hintergrund noch Anfragen laufen. Der größte Teil der Arbeit steckte genau
-darin — nicht in einer einzelnen Funktion, sondern darin, dass sich das Ganze
+darin: nicht in einer einzelnen Funktion, sondern darin, dass sich das Ganze
 flüssig anfühlt, obwohl ständig auf Daten gewartet wird.
 
 Die Pokémon werden nicht alle auf einmal geladen, sondern nachgeladen, wenn sie
