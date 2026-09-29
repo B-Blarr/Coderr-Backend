@@ -1,0 +1,6 @@
+[Unit]
+Description=Sicherung der Coderr-Datenbank und Medien
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup-coderr.sh
