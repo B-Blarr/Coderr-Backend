@@ -645,8 +645,8 @@ sudo systemctl enable --now assistant-embedding assistant-laya
 ```
 
 `file` muss `ASCII text` ohne `CRLF` melden. `verify` gibt im
-Erfolgsfall nichts aus. Nach dem Start dauert es 15 bis 50 Sekunden,
-bis die Modelle geladen sind, erst dann antworten die Smoke-Tests.
+Erfolgsfall nichts aus. Nach dem Start dauert es 15 bis gut 60 Sekunden,
+bis die Modelle geladen sind (5.3), erst dann antworten die Smoke-Tests.
 
 #### `.env`, Index, Messung
 
@@ -1193,9 +1193,12 @@ systemctl is-active assistant-embedding assistant-laya
 sudo systemctl restart assistant-embedding assistant-laya
 ```
 
-Nach einem Neustart brauchen die Dienste des Assistenten 15 bis 50
-Sekunden, bis die Modelle geladen sind. So lange antwortet der
-Assistent mit `503`. `systemctl status` zeigt schon vorher
+Nach einem Neustart brauchen die Dienste des Assistenten 15 bis gut 60
+Sekunden, bis die Modelle geladen sind. Schnell geht es nur, wenn ihre
+Dateien noch im Page Cache liegen, etwa direkt nach einem vorherigen
+Start. Am 29.09.2026 brauchte Laya 62 bis 63 Sekunden, der
+Embedding-Dienst 41 bis 47, am 28.09.2026 direkt nach einem Start 17 und
+15. So lange antwortet der Assistent mit `503`. `systemctl status` zeigt schon vorher
 `active (running)`, weil systemd nur den Prozess sieht, nicht das Modell.
 Jeder Start eines der beiden Dienste startet auch
 `assistant-warmup.service`, das wartet, bis die Modelle antworten, und
@@ -1649,10 +1652,18 @@ Budget bis zu Gunicorns 60 Sekunden nicht mehr (4.2). Stattdessen schickt
   `WantedBy=assistant-laya.service assistant-embedding.service`.
 
 Direkt nach einem Start lädt das Modell noch und der Port ist zu. Das
-Skript versucht es deshalb bis zu zwei Minuten lang erneut. Antwortet
-ein Dienst mit einem Fehler, scheitert der Lauf und die Unit steht in
-`systemctl --failed`. So fällt ein kaputter Dienst auch ohne Besucher
-auf.
+Skript fragt deshalb bis zu drei Minuten lang `/health` ab, ohne etwas
+ins Journal zu schreiben, und schickt die Anfrage erst, wenn der Dienst
+antwortet. Kommt ein Dienst in dieser Zeit nicht hoch, steht im Journal
+`… did not come up within three minutes`. Antwortet er mit einem Fehler,
+steht dort die Meldung von `curl`. In beiden Fällen scheitert der Lauf
+und die Unit steht in `systemctl --failed`. So fällt ein kaputter
+Dienst auch ohne Besucher auf.
+
+Die erste Fassung wartete nur 60 Sekunden, weil 30 Wiederholungen im
+Abstand von 2 Sekunden früher erschöpft waren als die eingestellte
+Höchstzeit. Beim Test am 29.09.2026 brauchte Laya nach einem Neustart
+aber 63 Sekunden.
 
 Das Skript kommt mit dem normalen Deploy auf den Server und läuft direkt
 aus dem Checkout. Es wird über `/bin/bash` gestartet, weil Git unter
@@ -1680,9 +1691,29 @@ sudo systemctl start assistant-warmup.service
 sudo journalctl -u assistant-warmup -n 10 --no-pager
 ```
 
+Nach einem Neustart prüfen, ob der Warm-up von selbst mitläuft. Die
+Schleife wartet, solange er noch läuft (`activating`):
+
+```bash
+sudo systemctl restart assistant-laya
+sleep 3
+while [ "$(systemctl is-active assistant-warmup)" = activating ]; do sleep 2; done
+sudo journalctl -u assistant-laya -u assistant-warmup --since "-5min" --no-pager | grep -E "Started|Uvicorn running|warmup|did not come up|curl"
+```
+
+Erwartet: `Starting assistant-warmup` in derselben Sekunde wie `Started
+assistant-laya` und `Finished` kurz nach `Uvicorn running`, ohne
+`curl`-Zeilen dazwischen. Am 29.09.2026 so geprüft, auch für einen
+Absturz des Embedding-Dienstes per `kill -KILL`: Der Warm-up startete
+schon, als der Prozess endete, wartete den automatischen Neustart ab und
+war zwei Sekunden nach dem Laden fertig. Die erste echte Frage danach
+kam in 5,3 Sekunden mit `200`.
+
 Wie lange ein Lauf gedauert hat, zeigen die Zeitstempel von `Starting`
-und `Finished` im Journal. Dauert ein Lauf mitten im Takt wieder rund
-zehn Sekunden, war ein Modell trotz zehn Minuten kalt. Dann das
+und `Finished` im Journal. In der ersten Stunde lief der Timer alle 10
+bis 11 Minuten (systemd darf bis zu einer Minute später auslösen), jeder
+Lauf dauerte rund eine Sekunde. Dauert ein Lauf mitten im Takt wieder
+rund zehn Sekunden, war ein Modell trotz zehn Minuten kalt. Dann das
 Intervall in `assistant-warmup.timer` verkürzen.
 
 #### API-Schlüssel erneuern
@@ -1948,7 +1979,13 @@ die erste Anfrage nach einem Start schnell, 0,4 bis 0,8 Sekunden. Nach
 Stunden ohne Anfrage dauerte sie dagegen rund 10 Sekunden, und die
 erste echte Frage lief am 29.09.2026 in zwei Timeouts. Ein Test direkt
 nach dem Start sagt also nichts darüber, wie sich ein Dienst nach einer
-langen Pause verhält. Abhilfe ist das Aufwärmen aus 5.7.
+langen Pause verhält. Abhilfe ist das Aufwärmen aus 5.7. Dasselbe gilt
+für die Ladezeit: 17 Sekunden bei Laya direkt nach einem vorherigen
+Start, 62 bis 63 Sekunden, wenn der letzte Start länger zurücklag. Das
+galt auch dann, als der Timer die laufenden Modelle warm gehalten hatte:
+Beim Start werden Dateien gelesen, die der laufende Dienst nie wieder
+anfasst. Die erste Fassung des Warm-ups war auf die kurze Zeit
+ausgelegt und gab nach 60 Sekunden auf.
 
 **Ausführungsrecht aus Windows.** Unter Windows setzt `chmod +x` das
 Ausführungsrecht nicht in Git, alle Dateien in `deploy/` liegen dort mit
