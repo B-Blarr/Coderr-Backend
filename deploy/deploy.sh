@@ -39,8 +39,12 @@ backup_database() {
     mkdir -p "$BACKUP_DIR"
     chmod 700 "$HOME/backups"
     rm -f "$BACKUP_DIR"/*.partial
+    # The cache table only holds throttle counters keyed by client
+    # address. A restore needs none of them, and a backup would keep the
+    # addresses for as long as it exists.
     PGPASSWORD="$db_password" pg_dump -h "$db_host" -p "$db_port" \
-        -U "$db_user" "$db_name" | gzip > "$file.partial"
+        -U "$db_user" --exclude-table-data=django_cache "$db_name" \
+        | gzip > "$file.partial"
     mv "$file.partial" "$file"
     echo "Backup: $file ($(du -h "$file" | cut -f1))"
 
