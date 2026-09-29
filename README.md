@@ -420,8 +420,10 @@ text; the question itself is sent to Anthropic to be answered. Locally Laya and 
 embedding service each run in their own terminal, see their READMEs. On the
 server they run as two systemd services under a user of their own that cannot
 read the `.env`, reachable only from `127.0.0.1`, without any outbound
-connection and with a memory limit. The assistant stays switched off there
-until the portfolio shows it.
+connection and with a memory limit. After hours without a request, the first
+one took about ten seconds, twice as long as Django waits for the services,
+so a systemd timer sends each of them a request every ten minutes and whenever
+one of them starts.
 
 ---
 

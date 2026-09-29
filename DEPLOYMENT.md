@@ -71,10 +71,11 @@ Modelle einzeln laden würde. Beide laufen unter dem Systembenutzer
 über `127.0.0.1` erreichbar und dürfen selbst keine Verbindung nach außen
 aufbauen (Abschnitt 4.7).
 
-Der Assistent ist bis zur Freigabe ausgeschaltet
-(`ASSISTANT_ENABLED=False`) und antwortet mit `503`. Er antwortet
-ebenfalls mit `503`, wenn einer der Dienste oder Claude nicht antwortet.
-Einrichtung in 3.16, Betrieb in 5.7.
+Der Assistent ist seit dem 29.09.2026 eingeschaltet
+(`ASSISTANT_ENABLED=True`). Er antwortet mit `503`, wenn einer der
+Dienste oder Claude nicht antwortet. Damit die Modelle nach längerer
+Pause nicht kalt sind, schickt `assistant-warmup.timer` ihnen alle zehn
+Minuten eine Anfrage (5.7). Einrichtung in 3.16, Betrieb in 5.7.
 
 ### Komponenten
 
@@ -99,7 +100,7 @@ Einrichtung in 3.16, Betrieb in 5.7.
 |-------------------------------------------------------------|------------------------------|
 | `https://benjaminblarr.de/`                                 | Portfolio (Angular)          |
 | `https://benjaminblarr.de/api/contact/`                     | Kontaktformular des Portfolios |
-| `https://benjaminblarr.de/api/assistant/`                   | Portfolio-Assistent, bis zur Freigabe `503` |
+| `https://benjaminblarr.de/api/assistant/`                   | Portfolio-Assistent, seit 29.09.2026 eingeschaltet |
 | `https://benjaminblarr.de/join/`                            | Join (Angular, Hash-Routing) |
 | `https://benjaminblarr.de/pokedex/`                         | Pokédex (statisch)           |
 | `https://benjaminblarr.de/el-pollo-loco/`                   | El Pollo Loco (statisch)     |
@@ -140,6 +141,8 @@ Warum umgestellt wurde, steht in Abschnitt 7.
 /usr/local/bin/backup-coderr.sh                 tägliche Sicherung (deploy/backup-coderr.sh)
 /etc/systemd/system/coderr-backup.*             Timer der Sicherung (deploy/)
 /etc/systemd/system/coderr-cache-cleanup.*      stündliches Aufräumen des Caches (deploy/)
+/etc/systemd/system/assistant-warmup.*          Aufwärmen der Modelle (deploy/), das Skript
+                                                läuft direkt aus dem Checkout
 /var/backups/coderr/                            nächtliche Sicherungen, 14 Tage
 /home/benni/backups/coderr/                     Sicherungen vor jedem Deploy, letzte 10
 /swapfile                                        2 GB Swap
@@ -681,6 +684,12 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST https://coderr.benjaminblarr.de
 Erwartet `503` mit `{"detail":"Der Assistent ist gerade nicht
 verfügbar."}` und `404`.
 
+#### Aufwärmen
+
+Zum Schluss den Warm-up einrichten (5.7), spätestens bevor der
+Assistent eingeschaltet wird. Ohne ihn läuft die erste Frage nach einer
+längeren Pause in das Zeitlimit.
+
 ---
 
 ## 4. Konfigurationsdateien
@@ -710,8 +719,8 @@ EMAIL_HOST_PASSWORD=<anwendungsspezifisches Passwort, nicht das Kontopasswort>
 DEFAULT_FROM_EMAIL=<dieselbe Adresse wie EMAIL_HOST_USER>
 CONTACT_RECIPIENT=<Zieladresse der Formularnachrichten>
 
-# Portfolio assistant. Stays off until stage 8.
-ASSISTANT_ENABLED=False
+# Portfolio assistant.
+ASSISTANT_ENABLED=True
 ANTHROPIC_API_KEY=<Schlüssel "coderr-server" aus der Claude Console>
 ```
 
@@ -720,9 +729,9 @@ Ohne gesetzte Variablen verhält sich das Projekt wie in der Entwicklung:
 `DB_NAME`, ohne sie startet Django nicht. Der Produktionsmodus entsteht
 ausschließlich durch diese Datei.
 
-`ASSISTANT_ENABLED=False` wäre ohne die Zeile auch der Fall. Sie steht
-trotzdem da, damit das Einschalten das Ändern eines sichtbaren Werts
-ist. `ANTHROPIC_API_KEY` ist ein eigener Schlüssel nur für den Server,
+`ASSISTANT_ENABLED` steht seit dem 29.09.2026 auf `True`. Ohne die
+Zeile wäre der Assistent aus, `False` schaltet ihn ab (5.7).
+`ANTHROPIC_API_KEY` ist ein eigener Schlüssel nur für den Server,
 getrennt vom lokalen: einzeln sperrbar, in der Console getrennt
 abgerechnet, mit eigener Laufzeit. Er steht nirgends sonst, auch nicht
 in den GitHub-Secrets, weil die CI ihn nicht braucht. Läuft er ab,
@@ -1188,6 +1197,9 @@ Nach einem Neustart brauchen die Dienste des Assistenten 15 bis 50
 Sekunden, bis die Modelle geladen sind. So lange antwortet der
 Assistent mit `503`. `systemctl status` zeigt schon vorher
 `active (running)`, weil systemd nur den Prozess sieht, nicht das Modell.
+Jeder Start eines der beiden Dienste startet auch
+`assistant-warmup.service`, das wartet, bis die Modelle antworten, und
+sie einmal rechnen lässt (5.7).
 
 `reload` vor `restart` bevorzugen, wo möglich. `reload` unterbricht
 bestehende Verbindungen nicht.
@@ -1315,6 +1327,15 @@ fehlte, `django_migrations` +2, `django_content_type` +1,
 `assistant_app`-Migrationen. Die direkt danach von Hand angelegte
 nächtliche Sicherung (`sudo /usr/local/bin/backup-coderr.sh`) stimmte in
 allen 18 Tabellen überein, ohne offene Migration.
+
+Erneut geprobt am 29.09.2026 mit der ersten nächtlichen Sicherung ohne
+Cache-Zeilen, von Hand angelegt direkt nach dem Deploy, der die
+IP-Spalte der Kontaktnachrichten entfernt hat. In einer Sekunde ohne
+Meldung eingespielt. Alle 18 Tabellen stimmten überein bis auf
+`django_cache` (Sicherung `0`, live `3`, gewollt), keine Sequenz hinter
+ihrer Tabelle, keine offene Migration. Im Dump steht die Tabelle
+`django_cache`, aber kein `COPY`-Block dafür und keine Spalte
+`ip_address`.
 
 #### Notfall: Datenbank aus einer Sicherung zurückholen
 
@@ -1473,7 +1494,8 @@ Alle Befehle in `/var/www/coderr/backend`.
 
 #### Einschalten und ausschalten
 
-In der `.env` `ASSISTANT_ENABLED=True` oder `False` setzen, dann:
+Eingeschaltet seit dem 29.09.2026. In der `.env` `ASSISTANT_ENABLED=True`
+oder `False` setzen, dann:
 
 ```bash
 sudo systemctl reload gunicorn-coderr
@@ -1596,6 +1618,73 @@ Erwartet `Failed with result 'signal'`, 5 Sekunden später
 `Scheduled restart job` und eine neue PID. `systemctl kill -s KILL`
 meldet unter Ubuntu 24.04 einen Fehler (Abschnitt 7).
 
+#### Aufwärmen
+
+Am 29.09.2026 lief die erste Frage nach dem Einschalten zweimal in das
+Zeitlimit von 5 Sekunden der Django-Clients: um 15:13 bei Laya, um 15:21
+beim Embedding-Dienst. Beide Dienste liefen seit dem Vortag, ein
+Neustart war es also nicht. Direkt an den Diensten gemessen, nach
+Stunden ohne Anfrage:
+
+| Dienst | erste Anfrage | gleich danach |
+|---|---|---|
+| Laya | 10,5 s | 0,26 s |
+| Embedding | 9,1 s | 0,08 s |
+
+Wo die Zeit verloren geht, ist nicht geklärt. Innerhalb der VM kann das
+Modell nicht ausgelagert werden: Die Gewichte liegen als anonymer
+Speicher im Prozess (`memory.stat`: Laya `anon` 1,7 GB), und
+`MemorySwapMax=0` sperrt den Swap für die Dienste. Eine naheliegende
+Erklärung ist, dass der Hoster lange ungenutzten Speicher der VM
+auslagert, das ist von innen nicht zu sehen.
+
+Die Zeitlimits in Django bleiben bei 5 Sekunden, sonst reicht das
+Budget bis zu Gunicorns 60 Sekunden nicht mehr (4.2). Stattdessen schickt
+`deploy/assistant-warmup.sh` beiden Diensten je eine Anfrage:
+
+- alle zehn Minuten über `assistant-warmup.timer`, zuerst zwei Minuten
+  nach dem Hochfahren,
+- bei jedem Start eines der beiden Dienste, ob beim Hochfahren, von Hand
+  oder automatisch nach einem Absturz. Dafür steht im Service
+  `WantedBy=assistant-laya.service assistant-embedding.service`.
+
+Direkt nach einem Start lädt das Modell noch und der Port ist zu. Das
+Skript versucht es deshalb bis zu zwei Minuten lang erneut. Antwortet
+ein Dienst mit einem Fehler, scheitert der Lauf und die Unit steht in
+`systemctl --failed`. So fällt ein kaputter Dienst auch ohne Besucher
+auf.
+
+Das Skript kommt mit dem normalen Deploy auf den Server und läuft direkt
+aus dem Checkout. Es wird über `/bin/bash` gestartet, weil Git unter
+Windows das Ausführungsrecht nicht speichert (Abschnitt 7). Die beiden
+Unit-Dateien wie in 4.5 hochladen, dann:
+
+```bash
+file /tmp/assistant-warmup.service /tmp/assistant-warmup.timer
+sudo install -m 644 -o root -g root /tmp/assistant-warmup.service /tmp/assistant-warmup.timer /etc/systemd/system/
+systemd-analyze verify /etc/systemd/system/assistant-warmup.service /etc/systemd/system/assistant-warmup.timer
+sudo systemctl daemon-reload
+sudo systemctl enable assistant-warmup.service
+sudo systemctl enable --now assistant-warmup.timer
+```
+
+`enable` auf den Service legt die Verweise in
+`assistant-laya.service.wants/` und `assistant-embedding.service.wants/`
+an, `enable --now` auf den Timer startet den Takt.
+
+Kontrolle:
+
+```bash
+systemctl list-timers assistant-warmup --no-pager
+sudo systemctl start assistant-warmup.service
+sudo journalctl -u assistant-warmup -n 10 --no-pager
+```
+
+Wie lange ein Lauf gedauert hat, zeigen die Zeitstempel von `Starting`
+und `Finished` im Journal. Dauert ein Lauf mitten im Takt wieder rund
+zehn Sekunden, war ein Modell trotz zehn Minuten kalt. Dann das
+Intervall in `assistant-warmup.timer` verkürzen.
+
 #### API-Schlüssel erneuern
 
 1. In der Claude Console einen neuen Schlüssel anlegen.
@@ -1678,6 +1767,8 @@ Direkt nach einem Lauf muss `abgelaufen` bei `0` stehen.
 | Deploy rot bei `build_index` | Embedding-Dienst läuft nicht oder lädt noch | `systemctl status assistant-embedding`, dann **Re-run jobs** |
 | Dienst des Assistenten startet nicht mehr | Startlimit erreicht (`start-limit-hit`), meist Modell nicht im Cache oder Rechte | Journal lesen, Ursache beheben, dann `sudo systemctl reset-failed <dienst>` und `start` |
 | Dienst des Assistenten startet immer wieder neu | `MemoryMax=` erreicht, im Journal `oom-kill` | Speicher kalt messen (5.7), Grenze anpassen |
+| Erste Frage nach längerer Pause `503`, im Journal `ReadTimeout` bei Laya oder Embedding | Modell kalt, Warm-up läuft nicht | `systemctl list-timers assistant-warmup`, `journalctl -u assistant-warmup` (5.7) |
+| `assistant-warmup.service` in `systemctl --failed` | ein Modell-Dienst läuft nicht oder antwortet mit Fehler | `systemctl status assistant-laya assistant-embedding`, Journal beider Dienste |
 | Abgelaufene Einträge in `django_cache` | Timer nicht aktiv oder Lauf gescheitert | `systemctl list-timers coderr-cache-cleanup`, `journalctl -u coderr-cache-cleanup` (5.8) |
 | Restore-Probe meldet `django_cache` als abweichend | gewollt, Sicherungen enthalten keine Cache-Zeilen | Abschnitt 5.5 |
 
@@ -1852,6 +1943,21 @@ processes: Invalid argument`, bekannt aus anderen Projekten
 Der Hauptprozess wurde trotzdem beendet und neu gestartet. Für Tests
 `kill -KILL` mit der PID aus `systemctl show -p MainPID --value`.
 
+**Kalte Modelle nach Leerlauf.** Nach der Einrichtung am 28.09.2026 war
+die erste Anfrage nach einem Start schnell, 0,4 bis 0,8 Sekunden. Nach
+Stunden ohne Anfrage dauerte sie dagegen rund 10 Sekunden, und die
+erste echte Frage lief am 29.09.2026 in zwei Timeouts. Ein Test direkt
+nach dem Start sagt also nichts darüber, wie sich ein Dienst nach einer
+langen Pause verhält. Abhilfe ist das Aufwärmen aus 5.7.
+
+**Ausführungsrecht aus Windows.** Unter Windows setzt `chmod +x` das
+Ausführungsrecht nicht in Git, alle Dateien in `deploy/` liegen dort mit
+`100644`. `backup-coderr.sh` läuft trotzdem, weil `install -m 755` den
+Modus auf dem Server setzt. Ein Skript, das direkt aus dem Checkout
+laufen soll, wird deshalb über `bash` gestartet
+(`ExecStart=/bin/bash …`), genau wie `deploy.sh` im Deploy-Job. Prüfen
+mit `git ls-files -s deploy/`.
+
 **Secret Key in der Git-Historie.** Der von `startproject` erzeugte
 Schlüssel steckte im ersten Commit. Beim Öffentlichmachen eines Repos
 wird die gesamte Historie lesbar, nicht nur der aktuelle Stand. Prüfen
@@ -1876,8 +1982,10 @@ Für die Zukunft: Secret Key ab dem ersten Commit in die `.env`.
       `sites-enabled` und das Zertifikat für `benjaminblarr.dev` vom
       Server entfernen. Sonst versucht certbot weiter, ein Zertifikat
       für eine Domain zu erneuern, die es nicht mehr gibt
-- [ ] Portfolio-Assistent einschalten (5.7), zusammen mit dem Widget
-      im Portfolio und dem Hinweis in dessen Datenschutzerklärung
+- [ ] Den Abschnitt des Assistenten im Portfolio einhängen (Etappe 8
+      im Portfolio-Repository). Der Endpunkt ist schon eingeschaltet
+- [ ] Die Dauer der Warm-up-Läufe in den ersten Tagen beobachten (5.7)
+      und das Intervall anpassen, falls Modelle trotzdem kalt werden
 - [ ] Sicherungen von vor dem 29.09.2026 enthalten noch IP-Adressen
       (Cache und Kontaktnachrichten). Die nächtlichen laufen bis zum
       13.10.2026 von selbst heraus. Die Deploy-Sicherungen in
@@ -1898,6 +2006,10 @@ Für die Zukunft: Secret Key ab dem ersten Commit in die `.env`.
 - [x] Beide Sicherungen ohne die Zeilen von `django_cache` (5.5)
 - [x] Kontaktformular speichert keine IP-Adresse mehr (5.6)
 - [x] Sicherungsskript und seine Units ins Repository geholt
+- [x] Portfolio-Assistent eingeschaltet, Datenschutzerklärung des
+      Portfolios um den Assistenten ergänzt
+- [x] Modelle werden alle zehn Minuten und nach jedem Start aufgewärmt
+      (5.7)
 
 ### Erledigt am 28.09.2026
 
