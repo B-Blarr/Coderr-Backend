@@ -12,8 +12,8 @@ erreichbar ist das Projekt bisher nicht.
 Technisch ist es sein anspruchsvollstes Backend. Nach dem Hochladen eines
 Videos läuft die Konvertierung mit FFmpeg zu HLS in drei Auflösungen, 480p,
 720p und 1080p, dazu wird ein Vorschaubild herausgeschnitten. Das passiert
-nicht während der Anfrage, sondern als Hintergrundjob — ein Video zu
-konvertieren dauert Minuten, und solange darf niemand vor einer wartenden Seite
+nicht während der Anfrage, sondern als Hintergrundjob. Ein Video zu
+konvertieren dauert Minuten, und so lange darf niemand vor einer wartenden Seite
 sitzen.
 
 Die Jobs laufen über zwei Warteschlangen mit unterschiedlicher Priorität: eine
@@ -64,7 +64,7 @@ Retrieval-Augmented Generation: Zu jeder Frage werden zuerst die passenden
 Abschnitte aus der Wissensbasis gesucht, und nur diese Abschnitte bekommt das
 Sprachmodell als Grundlage.
 
-Findet die Suche nichts Passendes, sagt der Assistent das — und das
+Findet die Suche nichts Passendes, sagt der Assistent das, und das
 Sprachmodell wird dann gar nicht erst gefragt.
 
 Davor sitzt zusätzlich ein Filter, der Versuche erkennt, den Assistenten aus

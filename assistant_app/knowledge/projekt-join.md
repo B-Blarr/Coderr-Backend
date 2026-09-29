@@ -49,5 +49,5 @@ Benjamins eigene Einschätzung nach der Arbeit damit: Supabase ist ein sehr gute
 Werkzeug, wenn man kein eigenes Backend bauen will. Man bekommt Datenbank,
 Authentifizierung und Ablage als fertigen Dienst und kann sich auf die Anwendung
 konzentrieren. Wo es hingegen um eigene Domänenlogik geht, braucht es etwas
-anderes — in seinen späteren Projekten übernimmt diese Rolle Django, während
+anderes. In seinen späteren Projekten übernimmt diese Rolle Django, während
 Supabase dort als Infrastruktur darunter liegt.
