@@ -1,0 +1,8 @@
+[Unit]
+Description=Hourly cleanup of the Coderr database cache
+
+[Timer]
+OnCalendar=hourly
+
+[Install]
+WantedBy=timers.target

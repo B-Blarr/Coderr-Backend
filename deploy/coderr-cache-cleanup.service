@@ -1,0 +1,11 @@
+[Unit]
+Description=Delete expired rows from the Coderr database cache
+After=postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+# Reads the database credentials from the .env, like Gunicorn.
+User=benni
+WorkingDirectory=/var/www/coderr/backend
+ExecStart=/var/www/coderr/backend/.venv/bin/python manage.py clear_expired_cache
