@@ -351,8 +351,8 @@ Base path: `/api/`
 
 Besides the Coderr API, this backend serves the assistant on my portfolio
 site: visitors ask questions about me and my projects, and the answer comes
-from a knowledge base I maintain instead of being made up. The feature is
-under construction and not live yet.
+from a knowledge base I maintain instead of being made up. It is live on
+[benjaminblarr.de](https://benjaminblarr.de).
 
 The pipeline, from the knowledge base to the answer:
 
@@ -362,12 +362,14 @@ The pipeline, from the knowledge base to the answer:
    [embedding service](embedding_service/README.md) and stores the vectors in
    PostgreSQL with pgvector.
 3. `POST /api/assistant/` with `{"question": "...", "lang": "de"}` (`lang` is
-   the language of the page, `de` or `en`) answers a pure greeting
-   such as "Hallo" right away with `{"kind": "greeting"}`. Every other
-   question goes to [Laya](laya_service/README.md), a small classifier for
-   jailbreak attempts, which answers `403` if its score reaches
-   `LAYA_THRESHOLD` (0.8). Then the five closest sections are searched, and
-   only those with a cosine similarity of at least
+   the language of the page, `de` or `en`) answers some messages right away,
+   without any service: pure small talk such as "Hallo", "Danke" or
+   "Tschüss" with `{"kind": "greeting"}`, `"thanks"` or `"farewell"`, and
+   obvious nonsense such as "???" or "hhhhhhh" with `{"kind": "unclear"}`.
+   Every other question goes to [Laya](laya_service/README.md), a small
+   classifier for jailbreak attempts, which answers `403` if its score
+   reaches `LAYA_THRESHOLD` (0.8). Then the five closest sections are
+   searched, and only those with a cosine similarity of at least
    `ASSISTANT_MIN_SIMILARITY` (0.76) are kept. Without any, the answer is
    `{"kind": "off_topic"}` and no language model is called. Otherwise Claude
    writes the answer from these sections in the language of the page:
@@ -379,13 +381,13 @@ The pipeline, from the knowledge base to the answer:
    questions on and off topic below the similarity threshold.
 5. `python manage.py evaluate_guard` sends the same questions and a list of
    attacks through Laya and reports false alarms and missed attacks.
-6. `python manage.py evaluate_answers` sends 33 fixed questions (on topic,
+6. `python manage.py evaluate_answers` sends 42 fixed questions (on topic,
    off topic and attacks) through search and Claude, once per model profile,
    and prints every answer with its tokens, cost and time. Without `--run` it
    only shows a cost estimate, because every run costs real money.
 
 Laya is a cheap pre-filter against obvious attacks, not a security boundary.
-Measured with `evaluate_guard`, it blocks none of the 49 questions on topic
+Measured with `evaluate_guard`, it blocks none of the 75 questions on topic
 and catches 8 of 15 attacks; quiet attacks without typical jailbreak wording
 get through. The threshold is a trade-off: a lower one also blocked genuine
 questions about AI, which is worse for a portfolio than a missed attack,
@@ -397,11 +399,13 @@ together, which caps the cost even when many addresses take part. An address
 over its own limit does not use up the shared quota: the view stops at the
 first throttle that refuses, while DRF by default asks every throttle.
 
-The similarity threshold is a coarse filter as well. It stops 11 of 24
-questions off topic and none of the 49 on topic, but only general knowledge
+The similarity threshold is a coarse filter as well. It stops 10 of 23
+questions off topic and none of the 75 on topic, but only general knowledge
 questions score that low. Realistic off-topic requests such as coding help
 score higher than many genuine questions, so they are left to the language
-model's instructions.
+model's instructions. Very short sections pull in unrelated questions too,
+because a text of a few words is close to everything; each section therefore
+carries enough words of its own topic.
 
 The model was chosen by measurement, not by name. Claude Haiku 4.5, Claude
 Sonnet 5 and Sonnet 5 with thinking all resisted every one of the 14 attacks
