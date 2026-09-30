@@ -8,15 +8,16 @@ quelle: Projekt Portfolio
 Das Portfolio unter benjaminblarr.de ist Benjamins persönliche Website, eine
 Single-Page-Anwendung mit Angular und TypeScript. Sie stellt ihn vor, zeigt
 seine Technologien, eine Auswahl seiner Projekte mit Links zu den laufenden
-Anwendungen, Stimmen von Teampartnern und ein Kontaktformular.
+Anwendungen, Stimmen von Teampartnern, diesen Assistenten und ein
+Kontaktformular.
 
 Die Seite ist zweisprachig, Deutsch und Englisch, und passt sich von großen
 4K-Bildschirmen bis hinunter zu 320 Pixel breiten Smartphones an.
 
-Das Design stammt von der Developer Akademie. Benjamins Arbeit ist die
-Umsetzung: der Aufbau der Komponenten, das Layout auf allen Breiten, die
-Übersetzung, das Formular mit dem Backend dahinter und die Auslieferung auf
-seinen eigenen Server. Der Quelltext liegt öffentlich auf GitHub.
+Benjamin hat die Seite nach einer Designvorlage selbst umgesetzt: den Aufbau
+der Komponenten, das Layout auf allen Breiten, die Übersetzung, das Formular
+mit dem Backend dahinter und die Auslieferung auf seinen eigenen Server. Der
+Quelltext liegt öffentlich auf GitHub.
 
 ## Wie das Portfolio technisch aufgebaut ist
 
@@ -28,9 +29,10 @@ das Projekt-Overlay liegen getrennt davon.
 Die Texte der Seite stehen nicht in den Templates, sondern in je einer
 Sprachdatei für Deutsch und Englisch.
 
-Für den Knopf, das Kontaktformular und das Projekt-Overlay gibt es Unit-Tests
-mit Vitest. Beim Formular wird dabei auch die Anfrage an den Server geprüft,
-ohne dass ein echter Server laufen muss.
+Für den Knopf, das Kontaktformular, das Projekt-Overlay und den Assistenten
+gibt es Unit-Tests mit Vitest. Beim Formular und beim Assistenten wird dabei
+auch die Anfrage an den Server geprüft, ohne dass ein echter Server laufen
+muss.
 
 ## Wie die Zweisprachigkeit des Portfolios funktioniert
 
@@ -38,7 +40,7 @@ Das Portfolio ist zweisprachig, Deutsch und Englisch. Die Internationalisierung,
 kurz i18n, läuft über die Bibliothek ngx-translate.
 
 Alle sichtbaren Texte stehen in zwei JSON-Dateien, eine pro Sprache, mit
-denselben 143 Schlüsseln. Die Templates enthalten nur die Schlüssel, nicht die
+denselben Schlüsseln. Die Templates enthalten nur die Schlüssel, nicht die
 Texte. Fest im Template stehen nur der Name, die Berufsbezeichnung und die
 E-Mail-Adresse.
 
