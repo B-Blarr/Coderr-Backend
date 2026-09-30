@@ -13,12 +13,57 @@ administriert.
 
 Seine Stärke liegt darin, Vorlagen exakt und detailliert umzusetzen. Die
 responsiven Layouts seiner Projekte sind dafür das sichtbarste Beispiel: sie
-sind nicht ungefähr nachgebaut, sondern bis in die Abstände hinein.
+sind nicht ungefähr nachgebaut, sondern bis in die kleinsten Abstände hinein.
 
 Dass er von der Oberfläche bis zum Server durchgeht, ist keine Aufzählung von
 Schlagworten, sondern nachprüfbar: dieselbe Anwendung, die er in Angular
 geschrieben hat, läuft hinter einem Webserver, den er konfiguriert hat, auf
 einem System, das er selbst abgesichert hat.
+
+## Was Benjamin vor der Softwareentwicklung gemacht hat
+
+Vor seiner Weiterbildung hat Benjamin rund zehn Jahre als Kundenbetreuer
+gearbeitet. Er hat Kunden aus dem In- und Ausland bei der Übergabe ihrer
+Fahrzeuge betreut, ihnen die digitalen Funktionen und die dazugehörige App
+erklärt und dabei technische Inhalte in verständliche Sprache übersetzt.
+
+Damit die Abläufe reibungslos liefen, hat er sich mit anderen Abteilungen
+abgestimmt. Ging etwas schief, hat er selbst nach der Ursache gesucht und sich
+um die Beschwerde gekümmert.
+
+Aus dieser Zeit bringt er mit, erst genau nachzufragen und dann technische
+Dinge so zu erklären, dass sie auch bei Menschen ankommen, die sich mit Technik
+nicht auskennen.
+
+Warum er in die Softwareentwicklung gewechselt ist, erzählt Benjamin gerne im
+persönlichen Gespräch.
+
+## Wie viel Erfahrung Benjamin als Entwickler hat
+
+Benjamin hat ein Jahr in Vollzeit Frontend- und Backend-Entwicklung gelernt und
+dabei durchgehend an Praxisprojekten gearbeitet. Schon während der
+Weiterbildung hat er außerdem eigene Projekte gebaut, und seitdem sind weitere
+dazugekommen, darunter Cardelia, sein größtes Projekt, und dieser Assistent.
+
+Seine Projekte schreibt er nicht nur, er betreibt sie auch. Die meisten laufen
+auf seinem eigenen Server, bei jeder Änderung prüfen automatische Tests den
+Code, bevor er live geht, und um Sicherungen und die Absicherung des Servers
+kümmert er sich selbst.
+
+## Welche Abschlüsse Benjamin hat
+
+Benjamin hat seine Vollzeitweiterbildung bei der Developer Akademie mit zwei
+Abschlusszertifikaten abgeschlossen: Qualifikation zum Softwareentwickler mit
+Schwerpunkt Web-Anwendungen Frontend Development und mit Schwerpunkt
+Web-Anwendungen Back-End Development.
+
+## Wie gut Benjamin Englisch spricht
+
+Deutsch ist Benjamins Muttersprache, sein Englisch ist sehr gut.
+
+In der Kundenbetreuung hat er internationale Besucher auch auf Englisch
+betreut, und in seinen Projekten schreibt er Code-Kommentare und
+Commit-Nachrichten auf Englisch.
 
 ## Wo Benjamin lebt und wie er arbeiten möchte
 
@@ -37,9 +82,7 @@ Wichtig sind ihm Lesbarkeit, Performance und die Bedienbarkeit für den
 Anwender. Genauso wichtig ist ihm die Zusammenarbeit im Team: voneinander zu
 lernen und gemeinsam besser zu werden.
 
-Qualität geht bei ihm vor Schnelligkeit. Lieber ein paar Minuten länger für
-eine saubere Lösung, als ein verfrühtes "ist fertig", das später jemand
-auseinandernehmen muss. Bei Fehlern sucht er die Ursache, statt das Symptom zu
+Qualität geht bei ihm vor Schnelligkeit. Bei Fehlern sucht er die Ursache, statt das Symptom zu
 überdecken.
 
 ## Wie Benjamin mit KI arbeitet
