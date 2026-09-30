@@ -9,29 +9,48 @@ from rest_framework.test import APITestCase
 from rest_framework.throttling import SimpleRateThrottle
 
 from assistant_app.embedding_client import EmbeddingServiceError
-from assistant_app.greetings import is_greeting
 from assistant_app.laya_client import LayaServiceError
 from assistant_app.llm_client import LlmServiceError
 from assistant_app.models import KnowledgeChunk
+from assistant_app.quick_replies import SMALL_TALK, quick_reply_kind
 from assistant_app.retrieval import keep_relevant
 from assistant_app.tests.helpers import mixed_vector, ranked, unit_vector
 
 
-class GreetingTests(SimpleTestCase):
-    """Test which messages count as a pure greeting."""
+class QuickReplyTests(SimpleTestCase):
+    """Test which messages are answered without the search."""
 
-    def test_recognizes_greetings_in_any_spelling(self):
-        texts = ['Hallo', 'hallo!', '  Guten   Morgen. ', 'GUDE', 'Halo',
-                 'Tschüß', 'Danke!!', 'Hi \N{WAVING HAND SIGN}']
-        for text in texts:
+    def test_recognizes_small_talk_in_any_spelling(self):
+        cases = {
+            'Hallo': 'greeting', '  Guten   Morgen. ': 'greeting',
+            'GUDE': 'greeting', 'Halo': 'greeting',
+            'Hi \N{WAVING HAND SIGN}': 'greeting', 'Danke!!': 'thanks',
+            'Vielen Dank': 'thanks', 'Thank you': 'thanks',
+            'Tschüß': 'farewell', 'Bis dann!': 'farewell',
+            'Goodbye': 'farewell',
+        }
+        for text, kind in cases.items():
             with self.subTest(text=text):
-                self.assertTrue(is_greeting(text))
+                self.assertEqual(quick_reply_kind(text), kind)
 
-    def test_questions_are_not_greetings(self):
+    def test_recognizes_obvious_nonsense(self):
+        for text in ['hhhhhhhhhhh', 'AHHHHHH', 'GHGHGHGHGHGHGHG', '???',
+                     '123456', '\N{SLIGHTLY SMILING FACE}' * 3, 'ßßßßß']:
+            with self.subTest(text=text):
+                self.assertEqual(quick_reply_kind(text), 'unclear')
+
+    def test_questions_and_short_words_go_the_normal_way(self):
         for text in ['Hallo, was hast du mit Django gebaut?',
-                     'Hallo Benjamin', 'Was machst du morgen?', 'Hilfe']:
+                     'Hallo Benjamin', 'Was machst du morgen?', 'Hilfe',
+                     'Danke, und was ist Cardelia?', 'CSS', 'PHP', 'lol',
+                     'hmm', 'Test']:
             with self.subTest(text=text):
-                self.assertFalse(is_greeting(text))
+                self.assertIsNone(quick_reply_kind(text))
+
+    def test_no_phrase_belongs_to_two_kinds(self):
+        phrases = [phrase for kind_phrases in SMALL_TALK.values()
+                   for phrase in kind_phrases]
+        self.assertEqual(len(phrases), len(set(phrases)))
 
 
 @override_settings(ASSISTANT_MIN_SIMILARITY=0.8)
@@ -119,10 +138,14 @@ class AssistantViewTests(APITestCase):
         self.assertEqual(
             response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
 
-    def test_greeting_is_answered_without_services(self, mock_embed):
-        response = self.ask('Hallo!')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'kind': 'greeting'})
+    def test_quick_replies_are_answered_without_services(self, mock_embed):
+        cases = {'Hallo!': 'greeting', 'Vielen Dank': 'thanks',
+                 'Tschüss': 'farewell', 'hhhhhhh': 'unclear'}
+        for question, kind in cases.items():
+            with self.subTest(question=question):
+                response = self.ask(question)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(response.data, {'kind': kind})
         self.mock_laya.assert_not_called()
         mock_embed.assert_not_called()
         self.mock_llm.assert_not_called()

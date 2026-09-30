@@ -11,13 +11,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from assistant_app.embedding_client import EmbeddingServiceError
-from assistant_app.greetings import is_greeting
 from assistant_app.laya_client import (
     LayaServiceError,
     is_attack,
     score_question,
 )
 from assistant_app.llm_client import LlmServiceError, answer_question
+from assistant_app.quick_replies import quick_reply_kind
 from assistant_app.retrieval import keep_relevant, search
 
 from .serializers import QuestionSerializer, SourceSerializer
@@ -31,10 +31,10 @@ SERVICE_ERRORS = (EmbeddingServiceError, LayaServiceError, LlmServiceError)
 class AssistantView(APIView):
     """Answers a visitor question from the knowledge base.
 
-    Pure greetings are answered right away. Every other question goes
-    through Laya, the search and the similarity threshold before Claude
-    writes an answer from the remaining sections. ``kind`` tells the
-    frontend which case it got.
+    Small talk and obvious nonsense are answered right away. Every other
+    question goes through Laya, the search and the similarity threshold
+    before Claude writes an answer from the remaining sections. ``kind``
+    tells the frontend which case it got.
     """
 
     permission_classes = [AllowAny]
@@ -53,8 +53,9 @@ class AssistantView(APIView):
         serializer = QuestionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        if is_greeting(data['question']):
-            return Response({'kind': 'greeting'})
+        quick_kind = quick_reply_kind(data['question'])
+        if quick_kind:
+            return Response({'kind': quick_kind})
         try:
             return self._answer(data['question'], data['lang'])
         except SERVICE_ERRORS as error:
