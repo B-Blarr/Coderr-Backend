@@ -10,16 +10,15 @@ hat. Sie bildet eine Plattform ab, auf der Dienstleistungen angeboten, bestellt
 und bewertet werden: Angebote, Bestellungen und Bewertungen, dazu Registrierung
 und Anmeldung mit Token-Authentifizierung.
 
-Das Frontend stammt von der Developer Akademie und war vorgegeben. Benjamins
-Arbeit ist das Backend dahinter, das die vorgegebene Schnittstelle exakt
-bedienen muss.
+Benjamin hat das Backend entworfen und gebaut. Es bedient ein bestehendes
+Frontend, und zwar exakt so, wie dessen Schnittstelle es erwartet.
 
 Coderr läuft unter coderr.benjaminblarr.de auf Benjamins eigenem Server, der
 Quelltext liegt öffentlich auf GitHub.
 
 ## Wie Coderr aufgebaut ist
 
-Coderr ist in sechs Django-Apps aufgeteilt, jede mit einem eigenen Bereich für
+Coderr ist in sieben Django-Apps aufgeteilt, jede mit einem eigenen Bereich für
 die Schnittstelle: Serializer, Views, URLs und Berechtigungen liegen getrennt
 voneinander. Der Zuschnitt folgt der Fachlichkeit (Anmeldung, Angebote,
 Bestellungen, Bewertungen), statt alles in eine große Anwendung zu legen.
@@ -32,6 +31,24 @@ Endpunkt verlangt zunächst eine Anmeldung, und öffentliche Endpunkte müssen d
 ausdrücklich erlauben. Der umgekehrte Weg, alles offen und einzelne Endpunkte
 abgesichert, verzeiht keinen Fehler, weil ein vergessener Endpunkt dann offen
 steht statt zu.
+
+## Was Benjamin bei Coderr selbst entschieden und gebaut hat
+
+Das Backend von Coderr hat Benjamin selbst entworfen und gebaut. Die Developer
+Akademie hat das Frontend und die Beschreibung der Schnittstelle gestellt, also
+welche Endpunkte es gibt und welche Felder sie liefern. Wie das dahinter
+umgesetzt ist, hat er entschieden: Datenmodell, Berechtigungen, Filter und
+Tests.
+
+Ein Beispiel aus dem Datenmodell: Eine Bestellung übernimmt Titel, Preis und
+Lieferzeit des bestellten Angebots, statt nur darauf zu verweisen. Ändert der
+Anbieter später seinen Preis oder löscht das Angebot, bleibt die Bestellung
+trotzdem richtig, so wie eine Rechnung, die sich nachträglich nicht mehr
+ändert.
+
+Aus eigener Idee dazugekommen sind die API-Dokumentation mit drf-spectacular,
+der Betrieb auf seinem eigenen Server mit automatischem Deployment, das
+Kontaktformular des Portfolios und dieser Assistent.
 
 ## Das Kontaktformular des Portfolios läuft über Coderr
 

@@ -20,9 +20,8 @@ anzufassen.
 Die Anmeldung läuft über JWT in HttpOnly-Cookies. Beim Abmelden kommt der
 Refresh-Token auf eine Sperrliste und kann nicht wiederverwendet werden.
 
-Quizly ist ein Ausbildungsprojekt der Developer Akademie. Das Frontend war
-vorgegeben, Benjamins Arbeit ist das Backend. Der Quelltext liegt öffentlich
-auf GitHub.
+Benjamins Teil ist das Backend, das Frontend stammt aus der Weiterbildung. Der
+Quelltext liegt öffentlich auf GitHub.
 
 ## Wie Quizly die Antwort der KI absichert
 

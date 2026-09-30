@@ -9,9 +9,8 @@ Cardelia ist ein Kartenkatalog mit Sammlungsverwaltung für Pokémon-Karten. Der
 Bestand umfasst rund 77.000 Karten in vier Sprachen, dazu Preise aus mehreren
 Quellen. Die Anwendung läuft, ist aber noch nicht öffentlich zugänglich.
 
-Cardelia ist Benjamins ambitioniertestes Projekt und das einzige, das er ohne
-Vorgaben und außerhalb der Developer Akademie baut. Stack, Architektur und
-Umfang hat er vollständig selbst entschieden.
+Cardelia ist Benjamins ambitioniertestes Projekt. Er baut es aus eigenem
+Antrieb, Stack, Architektur und Umfang hat er vollständig selbst entschieden.
 
 Unter benjaminblarr.de/cardelia ist die Laufzeit-Architektur als Schaubild
 einsehbar: welche Bestandteile es gibt, woher die Daten kommen und wohin sie
@@ -55,10 +54,8 @@ fallen unterschiedlich oft aus.
 
 ## Warum Cardelia als Projekt zählt
 
-Bei den Ausbildungsprojekten war der Stack vorgegeben. Cardelia ist die
-Ausnahme: Hier hat Benjamin selbst entschieden, was er einsetzt und wie er es
-zuschneidet. Entsprechend muss er diese Entscheidungen auch selbst
-verantworten.
+Bei Cardelia hat Benjamin selbst entschieden, was er einsetzt und wie er es
+zuschneidet. Entsprechend verantwortet er diese Entscheidungen auch selbst.
 
 Es ist außerdem das Projekt, das am längsten läuft und dadurch Fragen aufwirft,
 die in einem abgeschlossenen Übungsprojekt nie auftauchen: Was passiert, wenn

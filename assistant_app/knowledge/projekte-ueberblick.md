@@ -8,6 +8,7 @@ quelle: Projektübersicht
 Benjamins Projekte in der Reihenfolge, in der sie entstanden sind, jeweils mit
 den wichtigsten Technologien:
 
+- **Fotogram**: JavaScript, HTML, CSS, Bildergalerie mit Großansicht
 - **Book-Store**: JavaScript, HTML, CSS, Speicherung im LocalStorage
 - **BestellApp**: JavaScript, HTML, CSS
 - **Pokédex**: JavaScript, Daten von der PokéAPI
@@ -15,6 +16,7 @@ den wichtigsten Technologien:
 - **Join**: Angular, TypeScript, SCSS, Supabase, im Team zu viert
 - **Portfolio**: Angular, TypeScript, SCSS, zweisprachig
 - **Cardelia**: Python, Django, Celery, Redis, Supabase
+- **KanMind**: Python, Django REST Framework
 - **Coderr**: Python, Django REST Framework, PostgreSQL
 - **Quizly**: Python, Django REST Framework, Whisper, Gemini
 - **Videoflix**: Python, Django REST Framework, Redis, RQ, FFmpeg, Docker
@@ -29,36 +31,37 @@ Python und Django und zuletzt der Betrieb auf einem eigenen Server.
 ## Welche Projekte Benjamin mit Django und Python gebaut hat
 
 Im Backend arbeitet Benjamin mit Python, Django und dem Django REST Framework.
-Damit sind fünf Projekte entstanden:
+Damit sind sechs Projekte entstanden:
 
 - **Coderr** ist eine REST-API für eine Plattform, auf der Dienstleistungen
   angeboten, bestellt und bewertet werden. Sie läuft auf seinem eigenen Server.
+- **KanMind** ist eine REST-API für ein Kanban-Board mit Boards, Aufgaben und
+  Kommentaren. Berechtigungen auf Objektebene regeln, wer was sehen und ändern
+  darf. Der Quelltext liegt öffentlich auf GitHub.
 - **Quizly** macht aus einem YouTube-Video ein Quiz: Der Ton wird lokal mit
   Whisper in Text umgewandelt, Gemini schreibt daraus zehn Fragen.
 - **Videoflix** ist eine Videoplattform, die hochgeladene Videos im Hintergrund
   in mehrere Auflösungen umwandelt. Das Projekt ist noch in Arbeit.
-- **Cardelia** ist ein Kartenkatalog mit Sammlungsverwaltung, sein größtes und
-  einziges ohne Vorgaben entstandenes Projekt.
+- **Cardelia** ist ein Kartenkatalog mit Sammlungsverwaltung und sein größtes
+  Projekt. Stack und Architektur hat er dort selbst gewählt.
 - **Der Assistent auf dieser Seite** sucht Antworten in einer Wissensbasis mit
   PostgreSQL und pgvector.
-
-Die ersten drei sind Ausbildungsprojekte der Developer Akademie mit
-vorgegebenem Frontend. Benjamins Arbeit ist dort das Backend dahinter.
 
 ## Welche Frontend-Projekte Benjamin gebaut hat
 
 Im Frontend hat Benjamin zuerst ohne Framework gearbeitet, in reinem
-JavaScript mit HTML und CSS. So sind der Book-Store, die BestellApp, der
-Pokédex und das Spiel El Pollo Loco entstanden. Das war die Vorgabe der
-Developer Akademie und hat einen Sinn: Wer einmal jede Änderung von Hand ins
-DOM geschrieben hat, versteht, was ein Framework später abnimmt.
+JavaScript mit HTML und CSS. So sind die Bildergalerie Fotogram, der
+Book-Store, die BestellApp, der Pokédex und das Spiel El Pollo Loco
+entstanden. So war die Weiterbildung aufgebaut, und das hat einen Sinn: Wer
+einmal jede Änderung von Hand ins DOM geschrieben hat, versteht, was ein
+Framework später abnimmt.
 
 Danach kamen Angular und TypeScript. Damit sind Join, ein Task-Manager im Team
 zu viert, und sein Portfolio gebaut, beide mit SCSS und ohne UI-Framework wie
 Bootstrap oder Angular Material.
 
-Alle Frontend-Projekte sind öffentlich erreichbar und laufen auf Benjamins
-eigenem Server.
+Bis auf Fotogram sind alle Frontend-Projekte öffentlich erreichbar und laufen
+auf Benjamins eigenem Server. Den Quelltext von Fotogram gibt es auf GitHub.
 
 ## Warum im Portfolio nur vier Projekte stehen
 
