@@ -3,6 +3,13 @@ titel: Woran Benjamin gerade arbeitet
 quelle: Aktuelle Arbeit
 ---
 
+## Woran Benjamin gerade arbeitet
+
+Zurzeit arbeitet Benjamin an zwei Projekten weiter, die beide noch nicht
+öffentlich zugänglich sind. Bei Videoflix, einer Videoplattform, steht das
+Backend, das eigene Frontend ist noch im Aufbau. Cardelia, ein Kartenkatalog
+mit Sammlungsverwaltung, läuft bereits, ist aber noch nicht fertig.
+
 ## Videoflix, eine Streaming-Plattform mit Hintergrundverarbeitung
 
 Videoflix ist eine Videoplattform, an der Benjamin aktuell arbeitet. Das
@@ -54,23 +61,3 @@ Refresh-Token 7 Tage, und der Access-Token lässt sich über einen eigenen
 Endpunkt sauber erneuern. Die klassische Token-Authentifizierung des Django
 REST Frameworks, wie Benjamin sie bei Coderr verwendet, kennt beides nicht: Der
 Token ist dort unbefristet gültig und hat keine eingebaute Erneuerung.
-
-## Der Assistent auf dieser Seite
-
-Das zweite laufende Vorhaben ist der Assistent, mit dem gerade gesprochen wird.
-Er beantwortet Fragen zu Benjamin und seinen Projekten aus einer gepflegten
-Wissensbasis, statt sich Antworten auszudenken. Das Verfahren dahinter heißt
-Retrieval-Augmented Generation: Zu jeder Frage werden zuerst die passenden
-Abschnitte aus der Wissensbasis gesucht, und nur diese Abschnitte bekommt das
-Sprachmodell als Grundlage.
-
-Findet die Suche nichts Passendes, sagt der Assistent das, und das
-Sprachmodell wird dann gar nicht erst gefragt.
-
-Davor sitzt zusätzlich ein Filter, der Versuche erkennt, den Assistenten aus
-seiner Rolle zu holen oder ihm fremde Anweisungen unterzuschieben. Solche
-Anfragen werden abgewiesen, bevor sie Rechenzeit kosten.
-
-Benjamin hat den Assistenten gebaut, weil er RAG nicht nur in der Theorie
-verstehen wollte, sondern an einem System, das öffentlich läuft und auf das
-echte Besucher losgelassen werden.
