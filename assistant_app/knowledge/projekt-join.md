@@ -41,9 +41,8 @@ flackert oder eine Aufgabe kurzzeitig an zwei Stellen liegt.
 
 ## Warum bei Join Supabase eingesetzt wurde
 
-Supabase war bei Join vorgegeben, wie der übrige Stack auch. Join ist ein
-Ausbildungsprojekt der Developer Akademie, und die Technologiewahl gehörte zur
-Aufgabenstellung.
+Supabase gehörte bei Join zur Aufgabenstellung der Weiterbildung, wie der
+übrige Stack auch.
 
 Benjamins eigene Einschätzung nach der Arbeit damit: Supabase ist ein sehr gutes
 Werkzeug, wenn man kein eigenes Backend bauen will. Man bekommt Datenbank,

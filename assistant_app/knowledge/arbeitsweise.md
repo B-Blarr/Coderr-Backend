@@ -75,20 +75,12 @@ direkter Push auf den Hauptzweig würde also ungeprüft live gehen. Der Umweg
 
 ## Welche Projekte nach Vorgabe entstanden sind und welche frei
 
-Diese Einordnung nimmt Benjamin von sich aus vor, weil sie für die Bewertung
-seiner Projekte wichtig ist.
+Bei Cardelia und bei diesem Assistenten hat Benjamin alles selbst entschieden:
+Stack, Architektur und Zuschnitt. Er verantwortet diese Entscheidungen
+entsprechend auch selbst.
 
-Bei den Projekten aus der Developer Akademie (Join, El Pollo Loco, Pokédex,
-Coderr und Videoflix) waren Stack und Technologien vorgegeben. Die Aufgabe bestand
-nicht darin, die Werkzeuge auszuwählen, sondern damit ein funktionierendes und
-sauber gebautes Ergebnis zu liefern.
-
-Cardelia ist die Ausnahme: Es entsteht ohne Vorgaben und außerhalb der Akademie.
-Stack, Architektur und Zuschnitt hat Benjamin dort selbst entschieden und
-verantwortet sie entsprechend auch selbst.
-
-Dass ein Stack vorgegeben war, heißt dabei nicht, dass er nichts dazu sagen
-kann. Bei Videoflix kann er begründen, warum dort RQ und nicht Celery passt und
-warum die Tokens in HttpOnly-Cookies liegen und nicht im LocalStorage. Bei
-Cardelia hat er beides andersherum entschieden, weil das Projekt anders
-zugeschnitten ist.
+Bei Join, El Pollo Loco, Pokédex, Coderr, Quizly und Videoflix kam der Stack
+aus der Weiterbildung. Seine Entscheidungen innerhalb dieses Rahmens kann er
+begründen: bei Videoflix etwa, warum dort RQ und nicht Celery passt und warum
+die Tokens in HttpOnly-Cookies liegen und nicht im LocalStorage. Bei Cardelia hat er beides andersherum entschieden, weil das
+Projekt anders zugeschnitten ist.
