@@ -347,11 +347,26 @@ Base path: `/api/`
 
 ---
 
+## Portfolio Contact Form
+
+Besides the Coderr API, this backend serves two endpoints of my portfolio
+site. The first is the contact form, `POST /api/contact/`. A message is
+stored first and mailed afterwards, so a failing mail server loses nothing;
+the mail comes from my own address and carries the visitor's address as
+reply-to, because a foreign sender address lands in spam filters. A hidden
+honeypot field catches bots: the request still gets `201`, but the message
+is dropped, so a bot learns nothing from the answer. Each client address may
+send five messages per hour, counted by the `X-Real-IP` header that Nginx
+sets. The endpoint is left out of the generated API schema, since it is not
+part of the Coderr API.
+
+---
+
 ## Portfolio Assistant
 
-Besides the Coderr API, this backend serves the assistant on my portfolio
-site: visitors ask questions about me and my projects, and the answer comes
-from a knowledge base I maintain instead of being made up. It is live on
+The second endpoint is the assistant on my portfolio site: visitors ask
+questions about me and my projects, and the answer comes from a knowledge
+base I maintain instead of being made up. It is live on
 [benjaminblarr.de](https://benjaminblarr.de).
 
 The pipeline, from the knowledge base to the answer:
