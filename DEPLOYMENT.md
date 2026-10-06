@@ -835,6 +835,21 @@ Basisversion vor der Bearbeitung durch certbot. Nach `certbot --nginx`
 kommen `listen 443 ssl`, die Zertifikatspfade und ein
 Weiterleitungsblock für Port 80 hinzu.
 
+**HTTP/2 seit 06.10.2026.** Certbot schreibt `listen 443 ssl` ohne `http2`,
+nginx 1.24 spricht dann nur HTTP/1.1. In allen drei Dateien, die Port 443
+teilen (`benjaminblarr`, `coderr`, `benjaminblarr-dev`), steht jetzt
+`listen 443 ssl http2;` beziehungsweise `listen [::]:443 ssl http2 ...;`.
+Es muss in allen dreien stehen, sonst warnt nginx, weil sich die Server
+einen Anschluss teilen. Gesetzt mit
+`sed -i '/http2/! s/\(listen .*443 ssl\)\([ ;]\)/\1 http2\2/' <datei>`
+in `sites-available` (nicht in `sites-enabled`, dort liegen nur
+Verknüpfungen), dann `nginx -t` und `reload`. Probe:
+`curl -sI --http2 https://benjaminblarr.de/ | head -1` liefert `HTTP/2 200`,
+von außen auch für `coderr.` und die alte `.dev`-Adresse geprüft.
+Sicherung des Stands davor auf dem Server in `~/nginx-sicherung/`.
+Achtung beim Suchen: `grep -r` folgt keinen Verknüpfungen, für
+`sites-enabled` braucht es `grep -R`.
+
 ```nginx
 server {
     listen 80;
