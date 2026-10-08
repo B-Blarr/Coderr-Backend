@@ -61,7 +61,7 @@ POST https://benjaminblarr.de/api/assistant/
         ├─► 127.0.0.1:8001   Laya              assistant-laya.service
         ├─► 127.0.0.1:8002   Embedding-Dienst  assistant-embedding.service
         ├─► PostgreSQL       pgvector, Tabelle der Wissensabschnitte
-        └─► api.anthropic.com  Claude Haiku 4.5
+        └─► api.anthropic.com  Claude Haiku 5.5
 ```
 
 Laya und der Embedding-Dienst laufen als eigene systemd-Dienste und
@@ -92,7 +92,7 @@ Minuten eine Anfrage (5.7). Einrichtung in 3.16, Betrieb in 5.7.
 | Embedding-Dienst | FastAPI und uvicorn, `intfloat/multilingual-e5-base`, `127.0.0.1:8002` |
 | Laya         | `laya-serve` 0.3.20, Checkpoint `multilingual`, `127.0.0.1:8001` |
 | PyTorch      | 2.14.0, CPU-Build, je ein venv pro Dienst |
-| Sprachmodell | Claude Haiku 4.5 über die Anthropic-API |
+| Sprachmodell | Claude Haiku 5.5 über die Anthropic-API |
 
 ### URLs
 

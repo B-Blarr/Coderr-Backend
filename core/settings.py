@@ -248,7 +248,9 @@ ASSISTANT_MIN_SIMILARITY = env_probability("ASSISTANT_MIN_SIMILARITY", "0.76")
 # Language model that writes the answers. The profile picks model and
 # thinking, see assistant_app/llm_client.py; evaluate_answers compares them.
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-ASSISTANT_LLM_PROFILE = os.getenv("ASSISTANT_LLM_PROFILE", "haiku")
+ASSISTANT_LLM_PROFILE = os.getenv(
+    "ASSISTANT_LLM_PROFILE", "haiku-5-5-thinking"
+)
 
 
 # Embedding service
