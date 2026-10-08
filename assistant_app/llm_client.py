@@ -16,13 +16,22 @@ MAX_TOKENS = 2048
 LANGUAGES = {'de': 'German', 'en': 'English'}
 
 # Model and thinking per profile; evaluate_answers compares them. Only
-# Haiku takes a temperature: Sonnet 5 rejects the parameter with a 400.
+# Haiku 4.5 takes a temperature: Sonnet 5 and Haiku 5.5 reject it with a 400.
 # SDK 1.x dropped it from its signature, so it goes in through extra_body,
 # which is merged into the request as it is.
 PROFILES = {
     'haiku': {
         'model': 'claude-haiku-4-5',
         'extra_body': {'temperature': 0},
+    },
+    'haiku-5-5': {
+        'model': 'claude-haiku-5-5',
+        'thinking': {'type': 'disabled'},
+    },
+    'haiku-5-5-thinking': {
+        'model': 'claude-haiku-5-5',
+        'thinking': {'type': 'adaptive'},
+        'output_config': {'effort': 'low'},
     },
     'sonnet': {'model': 'claude-sonnet-5', 'thinking': {'type': 'disabled'}},
     'sonnet-thinking': {

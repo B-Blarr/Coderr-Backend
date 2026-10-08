@@ -19,7 +19,10 @@ DEFAULT_QUESTIONS = (
     Path(__file__).resolve().parents[2] / 'answer_questions.json'
 )
 # Dollars per million input and output tokens, from the Claude docs.
-PRICES = {'claude-haiku-4-5': (1.0, 5.0), 'claude-sonnet-5': (2.0, 10.0)}
+# Haiku 5.5 costs five times more above 100,000 prompt tokens; the
+# prompts here stay far below that.
+PRICES = {'claude-haiku-4-5': (1.0, 5.0), 'claude-haiku-5-5': (0.1, 0.5),
+          'claude-sonnet-5': (2.0, 10.0)}
 # Rough tokens per question, measured once; thinking may add more.
 ESTIMATED_TOKENS = (1500, 300)
 EXPECTED_ANSWERED = {'answer': True, 'decline': False, 'resist': False}

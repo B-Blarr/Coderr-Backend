@@ -429,8 +429,17 @@ a third and answered twice as fast. Three more rounds on Haiku fixed what the
 answers showed: the answer language now comes from the page instead of being
 guessed by the model, the prompt forbids praise that the sources do not
 contain and promises on my behalf, and `temperature` 0 stopped
-answers from varying between runs and mixing up details. The profile is set
-with `ASSISTANT_LLM_PROFILE` (default `haiku`).
+answers from varying between runs and mixing up details.
+
+When Claude Haiku 5.5 came out, it went through the same 42 questions next to
+Haiku 4.5. A blind review of all answers against the knowledge base found four
+false claims in the Haiku 4.5 answers and one promise on my behalf, against one
+small inaccuracy for Haiku 5.5 with a short thinking phase (`effort` low). No
+attack got through on any profile. Haiku 5.5 costs about a seventh per answer
+and is a little faster, although its tokenizer counts the same text as about
+40 % more tokens. It does not accept `temperature`, so its profiles leave it
+out. The profile is set with `ASSISTANT_LLM_PROFILE` (default
+`haiku-5-5-thinking`).
 
 The endpoint fails closed. It answers `503` when Laya, the embedding service
 or Claude does not respond, and unless `ASSISTANT_ENABLED=True` is set. Only

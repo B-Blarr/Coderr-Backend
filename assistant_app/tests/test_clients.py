@@ -191,6 +191,26 @@ class LlmClientTests(SimpleTestCase):
                          {'effort': 'low', 'format': ANSWER_FORMAT})
         self.assertNotIn('extra_body', kwargs)
 
+    def test_haiku_5_5_profiles_send_no_temperature(self):
+        self.create.return_value = claude_response(ANSWER)
+        profiles = (('haiku-5-5', {'type': 'disabled'}),
+                    ('haiku-5-5-thinking', {'type': 'adaptive'}))
+        for profile, thinking in profiles:
+            with self.subTest(profile=profile):
+                answer_question('Frage', ranked('A'), profile=profile)
+                kwargs = self.create.call_args.kwargs
+                self.assertEqual(kwargs['model'], 'claude-haiku-5-5')
+                self.assertEqual(kwargs['thinking'], thinking)
+                self.assertNotIn('extra_body', kwargs)
+
+    def test_skips_thinking_block_before_the_answer(self):
+        response = claude_response(ANSWER)
+        response.content.insert(
+            0, SimpleNamespace(type='thinking', thinking='', signature='s'))
+        self.create.return_value = response
+        result = answer_question('Frage', ranked('A'))
+        self.assertEqual(result['answer'], 'Mit Django.')
+
     def test_returns_answer_with_valid_sources_only(self):
         data = {'answer': 'Ja.', 'answered': True, 'sources': [2, 0, 5, 2]}
         self.create.return_value = claude_response(data)
