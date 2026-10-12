@@ -6,8 +6,9 @@ quelle: Projekt Cardelia
 ## Was Cardelia ist
 
 Cardelia ist ein Kartenkatalog mit Sammlungsverwaltung für Pokémon-Karten. Der
-Bestand umfasst rund 77.000 Karten in vier Sprachen, dazu Preise aus mehreren
-Quellen. Die Anwendung läuft, ist aber noch nicht öffentlich zugänglich.
+Bestand umfasst über 78.000 Karten in vier Sprachen, jede Sprachfassung mit
+eigenem Eintrag und eigenem Preis aus mehreren Quellen. Unter cardelia.de/demo
+lässt sich Cardelia ohne Konto als Demo ausprobieren.
 
 Cardelia ist Benjamins ambitioniertestes Projekt. Er baut es aus eigenem
 Antrieb, Stack, Architektur und Umfang hat er vollständig selbst entschieden.
@@ -44,7 +45,7 @@ PokeTrace, CardTrader, Limitless, PokeWallet, pokemontcg.io und tcggo.
 
 Einmal täglich läuft ein Lauf, der die Preise aktualisiert und prüft, ob neue
 Kartensets erschienen sind. Dieser Lauf ist der Kern des Systems: Ein Katalog
-mit 77.000 Karten in vier Sprachen ist keine Datenmenge, die man von Hand
+mit über 78.000 Karten in vier Sprachen ist keine Datenmenge, die man von Hand
 pflegt, und Preise, die eine Woche alt sind, sind für eine Sammlungsverwaltung
 wertlos.
 

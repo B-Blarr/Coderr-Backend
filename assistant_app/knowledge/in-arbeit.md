@@ -5,10 +5,11 @@ quelle: Aktuelle Arbeit
 
 ## Woran Benjamin gerade arbeitet
 
-Zurzeit arbeitet Benjamin an zwei Projekten weiter, die beide noch nicht
-öffentlich zugänglich sind. Bei Videoflix, einer Videoplattform, steht das
-Backend, das eigene Frontend ist noch im Aufbau. Cardelia, ein Kartenkatalog
-mit Sammlungsverwaltung, läuft bereits, ist aber noch nicht fertig.
+Zurzeit arbeitet Benjamin an zwei Projekten weiter. Bei Videoflix, einer
+Videoplattform, steht das Backend, das eigene Frontend ist noch im Aufbau und
+öffentlich ist es noch nicht. Cardelia, ein Kartenkatalog mit
+Sammlungsverwaltung, läuft bereits und ist unter cardelia.de/demo als Demo ohne
+Konto zu sehen, fertig ist es aber noch nicht.
 
 ## Videoflix, eine Streaming-Plattform mit Hintergrundverarbeitung
 
