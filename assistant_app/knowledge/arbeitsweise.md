@@ -75,7 +75,8 @@ direkter Push auf den Hauptzweig würde also ungeprüft live gehen. Der Umweg
 
 ## Welche Projekte nach Vorgabe entstanden sind und welche frei
 
-Bei Cardelia und bei diesem Assistenten hat Benjamin alles selbst entschieden:
+Bei Cardelia, bei diesem Assistenten und bei Nina hat Benjamin alles selbst
+entschieden:
 Stack, Architektur und Zuschnitt. Er verantwortet diese Entscheidungen
 entsprechend auch selbst.
 
