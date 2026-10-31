@@ -395,48 +395,71 @@ scp imprint.html privacy_policy.html vps:/var/www/coderr/frontend/
 
 ### 3.10a Portfolio und die übrigen Projekte
 
-Statische Projekte direkt von GitHub holen, das ist schneller als ein
-Upload und spart den Umweg über den Arbeitsrechner:
+Die Projektseiten kommen auf unterschiedlichen Wegen auf den Server
+(berichtigt am 18.10.2026, gemessen an den Workflows in den Repos):
+
+| Projekt | Weg | Ziel |
+|---|---|---|
+| Portfolio | GitHub Actions, Job `deploy` in `.github/workflows/ci.yml`, bei jedem Push auf `main` | `/var/www/portfolio/` |
+| El Pollo Loco | GitHub Actions, Job `deploy` in `.github/workflows/ci.yml`, bei jedem Push auf `main` | `/var/www/el-pollo-loco/` |
+| Join | von Hand: lokal bauen, per `scp` hochladen | `/var/www/join/` |
+| Pokédex | beim Einrichten per `git clone` geholt | `/var/www/pokedex/` |
+
+**Portfolio und El Pollo Loco deployen sich selbst.** Der Workflow prüft
+zuerst (beim Portfolio Build und Tests, bei El Pollo Loco ESLint und
+Prettier), schiebt die Dateien dann mit
+`rsync -rltv --delete --chmod=D755,F644` auf den Server und fragt danach
+die Live-Seite ab. Von Hand ist nichts zu tun, kein `scp`, kein
+`git pull` und kein `chmod`. Schlägt eine Prüfung fehl, wird nicht
+ausgerollt. Bei El Pollo Loco heißt das vor allem: vor dem Push
+`npm run format:check` laufen lassen und bei Bedarf `npm run format`,
+sonst bricht der Schritt "Check formatting" ab.
+
+⚠️ Wegen `--delete` nichts Eigenes in diese beiden Ordner legen. Was
+nicht im Repo steht, ist beim nächsten Push weg.
+
+El Pollo Loco wurde beim Einrichten ebenfalls per `git clone` geholt.
+Das ist überholt, ein `git pull` im Ordner auf dem Server ist heute
+nicht mehr der Weg.
+
+Pokédex beim Einrichten:
 
 ```bash
-sudo mkdir -p /var/www/el-pollo-loco /var/www/pokedex /var/www/join
-sudo chown benni:benni /var/www/el-pollo-loco /var/www/pokedex /var/www/join
+sudo mkdir -p /var/www/pokedex /var/www/join
+sudo chown benni:benni /var/www/pokedex /var/www/join
 
-git clone https://github.com/B-Blarr/El-Pollo-Loco.git /var/www/el-pollo-loco
 git clone https://github.com/B-Blarr/Pokedex.git /var/www/pokedex
 ```
 
-Angular-Projekte lokal bauen und hochladen. Beim Portfolio liegt das
-Ergebnis in `dist/portfolio/browser/`, bei Join in
-`dist/join-project/browser/`. Seit Angular 17 gibt es diese
-Zwischenebene `browser`, wer den Ordner darüber hochlädt, bekommt eine
-leere Seite.
+**Join** lokal bauen und hochladen. Der Quellordner ist der Fork
+`Join Fork\Join`, das Ergebnis liegt in `dist/join-project/browser/`.
+Seit Angular 17 gibt es diese Zwischenebene `browser`, wer den Ordner
+darüber hochlädt, bekommt eine leere Seite.
 
 ```powershell
-# Portfolio
-cd <projekt>\portfolio
-npm run build
-cd dist\portfolio\browser
-scp -r * vps:/var/www/portfolio/
-
-# Join, laeuft unter einem Unterpfad und braucht deshalb base-href
-cd <projekt>\Join
+cd "<projekte>\Join Fork\Join"
 npx ng build --base-href /join/
 cd dist\join-project\browser
 scp -r * vps:/var/www/join/
 ```
 
+Ändert sich nur die `index.html` (etwa Meta-Tags im `<head>`) und
+entspricht der lokale Build noch dem Live-Stand, reicht es, genau diese
+Datei hochzuladen, ohne neu zu bauen. So am 18.10.2026 für die
+Open-Graph-Tags gemacht (`index.html` und `og-join.jpg`).
+
 **Nach jedem `scp` die Rechte richten**, siehe Abschnitt 7:
 
 ```bash
-chmod -R a+rX /var/www/portfolio /var/www/join
+chmod -R a+rX /var/www/join
 ```
 
-Vor einem erneuten Deployment den Zielordner leeren, sonst sammeln sich
-alte Bundles an, weil Angular an jeden Dateinamen einen Hash hängt:
+Vor einem kompletten Neuaufspielen von Join den Zielordner leeren, sonst
+sammeln sich alte Bundles an, weil Angular an jeden Dateinamen einen
+Hash hängt:
 
 ```bash
-rm -rf /var/www/portfolio/*
+rm -rf /var/www/join/*
 ```
 
 ### 3.11 Gunicorn als Dienst
