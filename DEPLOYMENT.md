@@ -133,6 +133,8 @@ Warum umgestellt wurde, steht in Abschnitt 7.
 /etc/nginx/sites-available/coderr               Subdomain coderr.*
 /etc/nginx/sites-available/benjaminblarr-dev    Weiterleitung alte Domain
 /etc/nginx/snippets/projekte.conf               Projekt-Blöcke, eingebunden
+/etc/nginx/snippets/security-headers.conf       Sicherheits-Header, eingebunden
+/etc/nginx/snippets/security-headers-upstream.conf  Gegen doppelte Header vor Django
 /etc/systemd/system/gunicorn-coderr.service     Dienstdefinition
 /etc/systemd/system/assistant-embedding.service Embedding-Dienst
 /etc/systemd/system/assistant-laya.service      Laya
@@ -484,7 +486,10 @@ antwortet Django korrekt mit `400 Bad Request`.
 
 ### 3.12 Nginx
 
-Beide Dateien anlegen (Inhalte siehe Abschnitt 4.3 und 4.4), dann:
+Beide Dateien anlegen (Inhalte siehe Abschnitt 4.3 und 4.4) und vorher
+die zwei Bausteine für die Sicherheits-Header installieren (Abschnitt
+4.8). Fehlen die Bausteine, bricht `nginx -t` mit einem Fehler zur
+`include`-Zeile ab. Dann:
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/benjaminblarr /etc/nginx/sites-enabled/
@@ -493,6 +498,16 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+Nginx soll seine Versionsnummer nicht nennen. Dafür muss im
+`http`-Block von `/etc/nginx/nginx.conf` diese Zeile aktiv sein:
+
+```nginx
+server_tokens off;
+```
+
+Ob sie greift, zeigt `sudo nginx -T | grep server_tokens` und von außen
+der Header `Server: nginx` ohne Versionsnummer.
 
 > **Konfigurationsdateien nicht per Copy-Paste ins Terminal einfügen.**
 > Bei längeren `tee`-Blöcken verschluckt die Terminalsitzung
@@ -1130,6 +1145,65 @@ Wissensbasis hat 310 Tokens, das Modell nimmt bis 512, und der Speicher
 für die Attention wächst quadratisch mit der Länge. Zusammen dürfen die
 beiden Dienste 6 GB belegen, mit den 0,7 GB für den Rest bleibt der
 Server unter 7,9 GB.
+
+### 4.8 `/etc/nginx/snippets/security-headers.conf` und `security-headers-upstream.conf`
+
+Seit dem 11.11.2026 senden alle Seiten auf diesem Server denselben Satz
+Sicherheits-Header: `Strict-Transport-Security`,
+`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` und
+`Permissions-Policy`. Die Zeilen stehen einmal in einem Baustein und
+werden von dort eingebunden, damit sie nicht in jeder Datei einzeln
+gepflegt werden müssen.
+
+Beide Dateien liegen im Repository unter `deploy/` und werden so
+installiert:
+
+```powershell
+scp deploy/nginx-security-headers.conf deploy/nginx-security-headers-upstream.conf vps:/tmp/
+```
+```bash
+sudo install -m 644 -o root -g root /tmp/nginx-security-headers.conf \
+  /etc/nginx/snippets/security-headers.conf
+sudo install -m 644 -o root -g root /tmp/nginx-security-headers-upstream.conf \
+  /etc/nginx/snippets/security-headers-upstream.conf
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+**`security-headers.conf`** enthält die fünf `add_header`-Zeilen. Er
+wird im `server`-Block eingebunden und zusätzlich in jedem
+`location`-Block, der selbst ein `add_header` setzt (zum Beispiel für
+`Cache-Control`). Der Grund ist die Vererbung in Nginx: sobald ein
+`location`-Block ein eigenes `add_header` hat, gelten die geerbten aus
+dem `server`-Block dort nicht mehr. Ohne die zweite Einbindung würden
+genau die Antworten mit Cache-Regel ohne Sicherheits-Header
+ausgeliefert.
+
+**`security-headers-upstream.conf`** steht in den `location`-Blöcken,
+die an Django weiterreichen. Django sendet vier dieser Header selbst.
+Zusammen mit dem Satz von Nginx käme jeder doppelt an, bei
+`X-Frame-Options` sogar mit zwei verschiedenen Werten. Der Baustein
+blendet die Fassung von Django mit `proxy_hide_header` aus, übrig
+bleibt die von Nginx.
+
+In `nginx-benjaminblarr.conf` und `nginx-coderr.conf` steht seit dem
+11.11.2026 auch die Sperre für versteckte Dateien
+(`location ~ /\.(?!well-known) { deny all; }`). Sie verhindert, dass
+Ordner wie `.git` ausgeliefert werden. `.well-known` bleibt für certbot
+offen.
+
+Die n8n-Seite (`/etc/nginx/sites-available/n8n`, Vorlage im Repository
+Voice-Agent-Hotel unter `server/nginx-n8n.conf`) bindet
+`security-headers.conf` ebenfalls ein. Den zweiten Baustein braucht sie
+nicht, weil n8n diese Header nicht selbst sendet.
+
+Prüfen von außen, je Seite einmal:
+
+```bash
+curl -sI https://benjaminblarr.de/ | grep -i -E "strict-transport|x-content|x-frame|referrer|permissions"
+```
+
+Erwartet sind fünf Zeilen, jede genau einmal.
 
 ---
 
