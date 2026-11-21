@@ -9,8 +9,8 @@ Ja. Benjamin sucht eine Festanstellung in Vollzeit.
 
 Besonders reizen ihn Stellen, bei denen mit KI gearbeitet oder an KI gebaut
 wird. Weil er Anwendungen von der Oberfläche bis zum Server selbst baut und
-betreibt, kann er aber genauso im Frontend, im Backend, als
-Fullstack-Entwickler oder im Consulting einsteigen.
+betreibt, kann er aber genauso im Frontend, im Backend oder als
+Fullstack-Entwickler einsteigen.
 
 ## Was Benjamin bei einem Arbeitgeber wichtig ist
 

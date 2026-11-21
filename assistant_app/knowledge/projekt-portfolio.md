@@ -21,10 +21,10 @@ Quelltext liegt öffentlich auf GitHub.
 
 ## Wie das Portfolio technisch aufgebaut ist
 
-Das Portfolio nutzt Angular 21 mit Standalone-Komponenten, also ohne
-NgModules, und SCSS ohne UI-Framework. Jeder Bereich der Seite ist eine eigene
-Komponente, wiederverwendbare Bausteine wie der Knopf, das Kontaktformular und
-das Projekt-Overlay liegen getrennt davon.
+Das Portfolio nutzt Angular mit Standalone-Komponenten, also ohne NgModules,
+und SCSS ohne UI-Framework. Jeder Bereich der Seite ist eine eigene Komponente,
+wiederverwendbare Bausteine wie der Knopf, das Kontaktformular und das
+Projekt-Overlay liegen getrennt davon.
 
 Die Texte der Seite stehen nicht in den Templates, sondern in je einer
 Sprachdatei für Deutsch und Englisch.

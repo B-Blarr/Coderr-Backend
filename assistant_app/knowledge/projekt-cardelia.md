@@ -10,8 +10,8 @@ Bestand umfasst rund 80.000 Karten in vier Sprachen, jede Sprachfassung mit
 eigenem Eintrag und eigenem Preis aus mehreren Quellen. Unter cardelia.de/demo
 lässt sich Cardelia ohne Konto als Demo ausprobieren.
 
-Cardelia ist Benjamins ambitioniertestes Projekt. Er baut es aus eigenem
-Antrieb, Stack, Architektur und Umfang hat er vollständig selbst entschieden.
+Benjamin baut Cardelia aus eigenem Antrieb, Stack, Architektur und Umfang hat
+er vollständig selbst entschieden.
 
 Unter benjaminblarr.de/cardelia ist die Laufzeit-Architektur als Schaubild
 einsehbar: welche Bestandteile es gibt, woher die Daten kommen und wohin sie

@@ -45,8 +45,8 @@ Damit sind sechs Projekte entstanden:
   Whisper in Text umgewandelt, Gemini schreibt daraus zehn Fragen.
 - **Videoflix** ist eine Videoplattform, die hochgeladene Videos im Hintergrund
   in mehrere Auflösungen umwandelt. Das Projekt ist noch in Arbeit.
-- **Cardelia** ist ein Kartenkatalog mit Sammlungsverwaltung und sein größtes
-  Projekt. Stack und Architektur hat er dort selbst gewählt.
+- **Cardelia** ist ein Kartenkatalog mit Sammlungsverwaltung. Stack und
+  Architektur hat er dort selbst gewählt.
 - **Der Assistent auf dieser Seite** sucht Antworten in einer Wissensbasis mit
   PostgreSQL und pgvector.
 
