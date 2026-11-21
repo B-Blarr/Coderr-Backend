@@ -45,11 +45,11 @@ Anbindung an Embedding-Dienst, Filter und Sprachmodell, das Einlesen der
 Wissensbasis und die Schnittstelle. Die externen Dienste werden dabei ersetzt.
 
 Ob die Antworten etwas taugen, lässt sich so aber nicht prüfen. Dafür gibt es
-drei feste Listen. 111 Fragen prüfen die Suche. Bei 88 davon steht fest, welche
+drei feste Listen. 126 Fragen prüfen die Suche. Bei 103 davon steht fest, welche
 Abschnitte passen, und einer davon muss unter den ersten drei Treffern sein.
 Die übrigen 23 haben mit Benjamin nichts zu tun und dürfen nicht über die
 Schwelle kommen, ab der das Sprachmodell gefragt wird. 15 Angriffe prüfen den
-Filter, der sie abweisen muss, während er die normalen Fragen durchlässt. 45
+Filter, der sie abweisen muss, während er die normalen Fragen durchlässt. 50
 Fragen gehen bis zum Sprachmodell und prüfen, ob es antwortet, höflich ablehnt
 oder einem Versuch widersteht, es aus seiner Rolle zu holen. Mit dieser Liste
 hat Benjamin auch das Sprachmodell ausgewählt.
