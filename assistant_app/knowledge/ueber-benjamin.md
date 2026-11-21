@@ -57,7 +57,8 @@ kümmert er sich selbst.
 Benjamin hat seine Vollzeitweiterbildung bei der Developer Akademie mit zwei
 Abschlusszertifikaten abgeschlossen: Qualifikation zum Softwareentwickler mit
 Schwerpunkt Web-Anwendungen Frontend Development und mit Schwerpunkt
-Web-Anwendungen Back-End Development.
+Web-Anwendungen Back-End Development. Außerdem hat er das Zertifikat Claude
+Code Masterclass von Everlast Consulting.
 
 ## Wie gut Benjamin Englisch spricht
 
