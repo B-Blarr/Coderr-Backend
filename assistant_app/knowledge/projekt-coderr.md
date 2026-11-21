@@ -50,6 +50,23 @@ Aus eigener Idee dazugekommen sind die API-Dokumentation mit drf-spectacular,
 der Betrieb auf seinem eigenen Server mit automatischem Deployment, das
 Kontaktformular des Portfolios und dieser Assistent.
 
+## Wie Coderr getestet ist
+
+Die Plattform-API von Coderr hat 62 Tests mit dem Testwerkzeug des Django REST
+Frameworks. Sie gehen die Endpunkte so durch, wie das Frontend sie aufruft, und
+prüfen vor allem die Rechte. Ein Kunde darf bestellen, ein Anbieter nicht. Nur
+der Anbieter ändert den Status einer Bestellung und nur der Eigentümer ändert
+ein Angebot. Wer nicht angemeldet ist, bekommt 401, wer angemeldet, aber nicht
+berechtigt ist, bekommt 403. Dazu kommen falsche Eingaben, doppelte Bewertungen
+und die Filter der Listen. Bei der Registrierung wird auch geprüft, dass sich
+eine vergebene E-Mail-Adresse nicht in anderer Groß- und Kleinschreibung ein
+zweites Mal anmelden lässt.
+
+Die Tests laufen bei jeder Änderung in GitHub Actions gegen PostgreSQL, also
+gegen dieselbe Datenbank wie auf dem Server. Erst wenn sie bestehen, wird
+ausgerollt. Ein Abdeckungsbericht zeigt dabei, welcher Code von den Tests
+erreicht wird. Ziel sind mindestens 95 Prozent.
+
 ## Das Kontaktformular des Portfolios läuft über Coderr
 
 Das Kontaktformular auf benjaminblarr.de schickt seine Nachrichten an dieselbe
