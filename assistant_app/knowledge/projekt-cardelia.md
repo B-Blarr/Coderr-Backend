@@ -46,8 +46,8 @@ PokeTrace, CardTrader, Limitless, PokeWallet, pokemontcg.io und tcggo.
 Einmal täglich läuft ein Lauf, der die Preise aktualisiert und prüft, ob neue
 Kartensets erschienen sind. Dieser Lauf ist der Kern des Systems: Ein Katalog
 mit rund 80.000 Karten in vier Sprachen ist keine Datenmenge, die man von Hand
-pflegt, und Preise, die eine Woche alt sind, sind für eine Sammlungsverwaltung
-wertlos.
+pflegt. Fällt eine Quelle aus, bleibt der letzte Preis mit seinem Datum stehen,
+sodass jeder sieht, von wann ein Preis stammt.
 
 Mehrere Quellen für dasselbe bedeuten dabei nicht mehr Sicherheit, sondern mehr
 Arbeit: Die Quellen widersprechen sich, benennen Dinge unterschiedlich und
@@ -63,9 +63,10 @@ Portfolio auf der Projektkarte von Cardelia und auf der Architekturseite. Im
 ersten Teil zeigt es in 3D, was Cardelia für Sammler tut. Der zweite Teil
 zeigt, was nachts im Hintergrund passiert: den Weg eines einzelnen Preises von
 der Datenquelle über die Hintergrundjobs und die Datenbank bis in die Wertkurve
-einer Sammlung. Untertitel auf Deutsch und Englisch lassen sich einschalten.
+einer Sammlung. Auf der englischen Seite laufen englische Untertitel
+automatisch, auf der deutschen lassen sie sich einschalten.
 
-Entstanden ist das Video in Zusammenarbeit mit KI. Idee, Richtung und alle
+Entstanden ist das Video in Zusammenarbeit mit KI. Idee, Richtung und die
 Entscheidungen bis hin zu den Tönen kamen von Benjamin, den Sprechertext hat er
 in mehreren Runden geformt. Die 3D-Szenen hat Claude per Skript in Blender
 gebaut, gesprochen ist der Text von einer KI-Stimme von ElevenLabs.

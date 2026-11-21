@@ -71,8 +71,9 @@ neu und überträgt sie per rsync auf den Server. Dabei werden alte Dateien im
 selben Durchgang entfernt und die Dateirechte direkt beim Schreiben gesetzt.
 
 Nach dem Deployment prüft die Pipeline, ob die Seite erreichbar ist, ob die
-Sprachdateien wirklich als JSON ankommen und ob das Video vollständig
-ausgeliefert wird und sich im Player vorspulen lässt.
+Sprachdateien wirklich als JSON ankommen und ob das Video mit dem richtigen Typ
+ankommt und der Server Teilanfragen beantwortet, die ein Player zum Vorspulen
+braucht.
 
 ## Was Benjamin am Kontaktformular des Portfolios gelernt hat
 
