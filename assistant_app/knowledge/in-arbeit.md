@@ -5,14 +5,14 @@ quelle: Aktuelle Arbeit
 
 ## Woran Benjamin gerade arbeitet
 
-Zurzeit arbeitet Benjamin an drei Projekten weiter. Bei Videoflix, einer
-Videoplattform, steht das Backend, das eigene Frontend ist noch im Aufbau und
-öffentlich ist es noch nicht. Cardelia, ein Kartenkatalog mit
-Sammlungsverwaltung, läuft bereits und ist unter cardelia.de/demo als Demo ohne
-Konto zu sehen, fertig ist es aber noch nicht. Nina, sein Telefon-Sprachagent
-für ein fiktives Hotel, ist telefonisch erreichbar. Gerade baut er für sie
-einen Teambereich, in dem das Hotelteam Buchungsanfragen, Rückrufbitten und
-Anrufe sieht.
+Zurzeit arbeitet Benjamin vor allem an Nina, seinem Telefon-Sprachagenten für
+ein fiktives Hotel. Nina ist telefonisch erreichbar, gerade baut er für sie mit
+React einen Teambereich, in dem das Hotelteam Buchungsanfragen, Rückrufbitten
+und Anrufe sieht. Daneben entwickelt er Cardelia weiter, einen Kartenkatalog
+mit Sammlungsverwaltung. Cardelia läuft bereits und ist unter cardelia.de/demo
+als Demo ohne Konto zu sehen, fertig ist es aber noch nicht. Bei Videoflix,
+einer Videoplattform, steht das Backend. Ein eigenes Frontend mit Angular ist
+geplant, öffentlich ist das Projekt noch nicht.
 
 ## Der Teambereich für Nina
 
@@ -27,9 +27,9 @@ mit React und TypeScript. Fertig und öffentlich ist der Teambereich noch nicht.
 
 ## Videoflix, eine Streaming-Plattform mit Hintergrundverarbeitung
 
-Videoflix ist eine Videoplattform, an der Benjamin aktuell arbeitet. Das
-Backend steht, das eigene Frontend ist noch im Aufbau, und öffentlich
-erreichbar ist das Projekt bisher nicht.
+Videoflix ist eine Videoplattform, deren Backend steht. Ein eigenes Frontend
+mit Angular ist geplant, und öffentlich erreichbar ist das Projekt bisher
+nicht.
 
 Technisch ist es sein anspruchsvollstes Backend. Nach dem Hochladen eines
 Videos läuft die Konvertierung mit FFmpeg zu HLS in drei Auflösungen, 480p,
