@@ -1,5 +1,5 @@
 [
-  {"question": "Welche Projekte hat Benjamin mit Django gebaut?", "expected": ["Was Coderr ist", "Wie Coderr aufgebaut ist", "Die Architektur von Cardelia", "Videoflix, eine Streaming-Plattform mit Hintergrundverarbeitung", "Welche Projekte Benjamin mit Django und Python gebaut hat"]},
+  {"question": "Welche Projekte hat Benjamin mit Django gebaut?", "expected": ["Was Coderr ist", "Wie Coderr aufgebaut ist", "Die Architektur von Cardelia", "Videoflix, eine Streaming-Plattform mit Hintergrundverarbeitung", "Welche Projekte Benjamin mit Django und Python gebaut hat", "Welche Projekte Benjamin gebaut hat und mit welchem Stack"]},
   {"question": "Hat er schon mal selbst einen Server deployt?", "expected": ["Benjamin betreibt seine Projekte auf einem eigenen Server", "Wie neue Versionen live gehen", "Wie das Portfolio deployt wird"]},
   {"question": "Wie deployt Benjamin seine Projekte?", "expected": ["Wie neue Versionen live gehen", "Wie das Portfolio deployt wird"]},
   {"question": "Wie sichert er seinen Server ab?", "expected": ["Absicherung des Servers"]},
@@ -32,7 +32,7 @@
   {"question": "Why did Videoflix use JWT in cookies?", "expected": ["Warum Videoflix JWT verwendet und nicht Token-Authentifizierung"]},
   {"question": "What was the hardest part of the Pokédex?", "expected": ["Wo die eigentliche Schwierigkeit im Pokédex lag"]},
   {"question": "How does this assistant work?", "expected": ["Der Assistent auf dieser Seite"]},
-  {"question": "What did you build with Django?", "expected": ["Was Coderr ist", "Wie Coderr aufgebaut ist", "Die Architektur von Cardelia", "Videoflix, eine Streaming-Plattform mit Hintergrundverarbeitung", "Welche Projekte Benjamin mit Django und Python gebaut hat"]},
+  {"question": "What did you build with Django?", "expected": ["Was Coderr ist", "Wie Coderr aufgebaut ist", "Die Architektur von Cardelia", "Videoflix, eine Streaming-Plattform mit Hintergrundverarbeitung", "Welche Projekte Benjamin mit Django und Python gebaut hat", "Welche Projekte Benjamin gebaut hat und mit welchem Stack"]},
   {"question": "Welche Projekte hat Benjamin gebaut und mit welchem Stack?", "expected": ["Welche Projekte Benjamin gebaut hat und mit welchem Stack", "Welche Frontend-Projekte Benjamin gebaut hat", "Welche Projekte Benjamin mit Django und Python gebaut hat"]},
   {"question": "Which technologies has he worked with in his projects?", "expected": ["Welche Projekte Benjamin gebaut hat und mit welchem Stack", "Welche Projekte Benjamin mit Django und Python gebaut hat", "Welche Frontend-Projekte Benjamin gebaut hat"]},
   {"question": "Was hat er mit Angular gebaut?", "expected": ["Welche Frontend-Projekte Benjamin gebaut hat", "Was Join ist", "Was das Portfolio ist", "Wie das Portfolio technisch aufgebaut ist"]},
