@@ -29,12 +29,13 @@ einem eigenen Embedding-Dienst, der die Embeddings mit dem Modell
 multilingual-e5-base direkt auf dem Server berechnet. Für die Suche verlassen
 die Fragen den Server also nicht. Findet sie nichts Passendes, sagt der
 Assistent das, und das Sprachmodell wird gar nicht erst gefragt. Davor sitzt
-ein Filter, der Versuche erkennt, den Assistenten aus seiner Rolle zu holen
-oder ihm fremde Anweisungen unterzuschieben. Solche Anfragen werden abgewiesen,
-bevor sie das Sprachmodell erreichen. Die Antwort selbst schreibt Claude Haiku
-5.5 von Anthropic mit einer kurzen Denkphase. Benjamin hat es gegen Haiku 4.5
-getestet: Es beantwortete etwas mehr Testfragen richtig, kostete rund ein
-Siebtel und antwortete schneller.
+ein Filter, der offensichtliche Versuche abfängt, den Assistenten aus seiner
+Rolle zu holen oder ihm fremde Anweisungen unterzuschieben, bevor sie das
+Sprachmodell erreichen. Leisere Versuche lässt er durch, denen widersteht dann
+das Sprachmodell selbst. Die Antwort selbst schreibt Claude Haiku 5.5 von
+Anthropic mit einer kurzen Denkphase. Benjamin hat es gegen Haiku 4.5 getestet:
+Es beantwortete etwas mehr Testfragen richtig, kostete rund ein Siebtel und
+antwortete schneller.
 
 Benjamin hat den Assistenten gebaut, weil er RAG nicht nur in der Theorie
 verstehen wollte, sondern an einem System, das öffentlich läuft und von echten

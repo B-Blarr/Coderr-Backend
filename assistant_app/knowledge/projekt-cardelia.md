@@ -66,10 +66,10 @@ der Datenquelle über die Hintergrundjobs und die Datenbank bis in die Wertkurve
 einer Sammlung. Auf der englischen Seite laufen englische Untertitel
 automatisch, auf der deutschen lassen sie sich einschalten.
 
-Entstanden ist das Video in Zusammenarbeit mit KI. Idee, Richtung und die
-Entscheidungen bis hin zu den Tönen kamen von Benjamin, den Sprechertext hat er
-in mehreren Runden geformt. Die 3D-Szenen hat Claude per Skript in Blender
-gebaut, gesprochen ist der Text von einer KI-Stimme von ElevenLabs.
+Benjamin hat das Video zusammen mit KI gemacht. Idee, Richtung und die
+Entscheidungen bis hin zu den Tönen kamen von ihm, den Sprechertext hat er in
+mehreren Runden geformt. Die 3D-Szenen hat Claude per Skript in Blender gebaut,
+gesprochen ist der Text von einer KI-Stimme von ElevenLabs.
 
 ## Warum Cardelia als Projekt zählt
 
