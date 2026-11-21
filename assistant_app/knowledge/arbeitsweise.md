@@ -86,22 +86,18 @@ ist aber der Meinung, dass er das können muss. Im Team führt an diesem Ablauf
 nichts vorbei, und ihn erst dann zu lernen, wenn andere davon abhängen, ist der
 schlechtere Zeitpunkt.
 
-Der zweite ist Schutz vor eigenen Fehlern. In seinen Projekten laufen bei jedem
-Pull Request die vollständigen Prüfungen durch: Codeformatierung, statische
-Analyse, Tests, Build. Ausgerollt wird aber nur, was im Hauptzweig landet. Ein
-direkter Push auf den Hauptzweig würde also ungeprüft live gehen. Der Umweg
-über den Pull Request sorgt dafür, dass zwischen "geschrieben" und
-"ausgeliefert" immer eine automatische Kontrolle liegt.
+Der zweite ist Schutz vor eigenen Fehlern. In seinen Projekten mit Pipeline
+laufen bei jedem Pull Request die Prüfungen durch, je nach Projekt Linting,
+Formatprüfung, Tests und Build. So sieht er das Ergebnis, bevor etwas im
+Hauptzweig landet, und ausgerollt wird nur, was im Hauptzweig liegt und die
+Prüfungen bestanden hat.
 
 ## Welche Projekte nach Vorgabe entstanden sind und welche frei
 
 Bei Cardelia, bei diesem Assistenten und bei Nina hat Benjamin alles selbst
-entschieden:
-Stack, Architektur und Zuschnitt. Er verantwortet diese Entscheidungen
-entsprechend auch selbst.
+entschieden: Stack, Architektur und Zuschnitt. Er verantwortet diese
+Entscheidungen entsprechend auch selbst.
 
 Bei Join, El Pollo Loco, Pokédex, Coderr, Quizly und Videoflix kam der Stack
-aus der Weiterbildung. Seine Entscheidungen innerhalb dieses Rahmens kann er
-begründen: bei Videoflix etwa, warum dort RQ und nicht Celery passt und warum
-die Tokens in HttpOnly-Cookies liegen und nicht im LocalStorage. Bei Cardelia hat er beides andersherum entschieden, weil das
-Projekt anders zugeschnitten ist.
+aus der Weiterbildung. Wie er die Anforderungen darin umsetzt, hat er selbst
+entschieden, bei Coderr etwa Datenmodell, Berechtigungen und Tests.

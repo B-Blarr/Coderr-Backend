@@ -31,30 +31,31 @@ Videoflix ist eine Videoplattform, deren Backend steht. Ein eigenes Frontend
 mit Angular ist geplant, und öffentlich erreichbar ist das Projekt bisher
 nicht.
 
-Technisch ist es sein anspruchsvollstes Backend. Nach dem Hochladen eines
-Videos läuft die Konvertierung mit FFmpeg zu HLS in drei Auflösungen, 480p,
-720p und 1080p, dazu wird ein Vorschaubild herausgeschnitten. Das passiert
-nicht während der Anfrage, sondern als Hintergrundjob. Ein Video zu
-konvertieren dauert Minuten, und so lange darf niemand vor einer wartenden Seite
-sitzen.
+Technisch steckt in Videoflix viel Hintergrundverarbeitung. Nach dem Hochladen
+eines Videos läuft die Konvertierung mit FFmpeg zu HLS in drei Auflösungen,
+480p, 720p und 1080p, dazu wird ein Vorschaubild herausgeschnitten. Das
+passiert nicht während der Anfrage, sondern als Hintergrundjob. Ein Video zu
+konvertieren dauert Minuten, und so lange darf niemand vor einer wartenden
+Seite sitzen.
 
 Die Jobs laufen über zwei Warteschlangen mit unterschiedlicher Priorität: eine
 schnelle für E-Mails wie Kontoaktivierung und Passwort-Zurücksetzen, eine
 langsame für die Videokonvertierung. Der Grund ist einfach: Eine
 Aktivierungsmail, die hinter einer halbstündigen Videokonvertierung in der
-Schlange steht, kommt zu spät. Abgearbeitet wird von zwei Arbeitsprozessen in
-eigenen Docker-Containern, mit Redis als Unterbau.
+Schlange steht, kommt zu spät. Abgearbeitet werden sie von zwei
+Arbeitsprozessen im Backend-Container, die die schnelle Warteschlange immer
+zuerst bedienen, mit Redis als Unterbau.
 
 ## Warum Videoflix RQ verwendet und nicht Celery
 
 Benjamin hat in seinen Projekten beide Werkzeuge eingesetzt: Celery bei
-Cardelia, RQ bei Videoflix. Die Entscheidung fiel jeweils nach Projektgröße.
+Cardelia, RQ bei Videoflix.
 
-Für Videoflix reicht eine einfache Warteschlange auf Redis-Basis. Celery
-entfaltet seine Stärken erst mit einem zusätzlichen Vermittler wie RabbitMQ,
-und damit auch dessen Betriebsaufwand. RQ ist leichtgewichtiger, schneller
-aufgesetzt und bringt über django-rq eine Oberfläche mit, auf der sich Jobs,
-Fehler und vollständige Fehlerausgaben ansehen lassen.
+Für Videoflix reicht eine einfache Warteschlange auf Redis-Basis. Celery bringt
+mit Zeitplaner, automatischen Wiederholungen und verketteten Aufgaben mehr mit,
+als Videoflix braucht. RQ ist leichtgewichtiger, schneller aufgesetzt und
+bringt über django-rq eine Oberfläche mit, auf der sich Jobs, Fehler und
+vollständige Fehlerausgaben ansehen lassen.
 
 Bei zwei Warteschlangen und im Kern einem einzigen Job-Typ war das der
 passendere Zuschnitt. Die Frage ist für Benjamin nicht, welches Werkzeug
