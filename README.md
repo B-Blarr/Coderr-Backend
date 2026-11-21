@@ -396,7 +396,7 @@ The pipeline, from the knowledge base to the answer:
    questions on and off topic below the similarity threshold.
 5. `python manage.py evaluate_guard` sends the same questions and a list of
    attacks through Laya and reports false alarms and missed attacks.
-6. `python manage.py evaluate_answers` sends 42 fixed questions (on topic,
+6. `python manage.py evaluate_answers` sends 50 fixed questions (on topic,
    off topic and attacks) through search and Claude, once per model profile,
    and prints every answer with its tokens, cost and time. Without `--run` it
    only shows a cost estimate, because every run costs real money.
