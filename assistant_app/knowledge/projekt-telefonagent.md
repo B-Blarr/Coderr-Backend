@@ -43,9 +43,8 @@ Post-Call-Webhook, aus dem n8n Dauer, Kosten und Kanal speichert. Was ein Anruf
 gebracht hat, ergibt sich per SQL aus den gespeicherten Daten.
 
 Auf dem Server laufen n8n und PostgreSQL in Docker hinter Nginx. Die Datenbank
-ist in SQL-Migrationen beschrieben. Bei jeder Änderung laufen sie in GitHub
-Actions auf einer frischen Datenbank, wo Tests freie Zimmer und Preise,
-Doppelbuchungen, die Rechte der Datenbankrolle und die Löschfristen prüfen.
+ist in SQL-Migrationen beschrieben, die bei jeder Änderung in GitHub Actions
+auf einer frischen Datenbank getestet werden.
 
 ## Wie Nina ein Telefongespräch führt
 
@@ -99,25 +98,27 @@ versuchen Doppelbuchungen. Außerdem prüfen sie, ob das Ergebnis eines Anrufs
 richtig abgeleitet wird, was die Datenbankrollen dürfen und ob die Löschfristen
 greifen.
 
-Die API des Teambereichs prüfen Tests mit pytest, ebenfalls in GitHub Actions
-und gegen eine echte PostgreSQL-Datenbank mit den Rechten des Hotels. Sie
-prüfen unter anderem, dass ohne Anmeldung nichts zu sehen ist, dass sich nur
-der Status ändern lässt, dass Anmeldung und Änderungen ein CSRF-Token brauchen
-und dass wiederholte Fehlanmeldungen gebremst werden. Zusätzlich durchsucht die
-Pipeline die gesamte Git-Historie nach versehentlich eingecheckten
-Zugangsdaten.
+Die API des Teambereichs, der gerade entsteht, prüfen Tests mit pytest,
+ebenfalls in GitHub Actions und gegen eine echte PostgreSQL-Datenbank mit genau
+den Rechten der Datenbankrolle des Teambereichs. Sie prüfen unter anderem, dass
+ohne Anmeldung nichts zu sehen ist, dass sich nur der Status ändern lässt, dass
+Anmeldung und Änderungen ein CSRF-Token brauchen und dass wiederholte
+Fehlanmeldungen gebremst werden. Zusätzlich durchsucht die Pipeline die gesamte
+Git-Historie nach versehentlich eingecheckten Zugangsdaten.
 
-Im laufenden Betrieb kommt die Bewertung jedes echten Anrufs dazu.
+Im laufenden Betrieb bewertet ElevenLabs außerdem jeden echten Anruf nach drei
+festen Kriterien, und ein wöchentlicher Bericht zeigt die Anrufe, die nicht
+bestanden haben.
 
 ## Wie Ninas Qualität im laufenden Betrieb geprüft wird
 
 Die sieben Gesprächstests prüfen Nina, bevor eine Änderung live geht. Danach
 bewertet ElevenLabs jeden echten Anruf nach dem Gespräch anhand von drei
 Kriterien: Wurde das Anliegen des Anrufers beantwortet oder an das Team
-weitergegeben? Stammen freie Zimmer und Preise aus einem Werkzeugergebnis und
-hat Nina sie richtig wiedergegeben? Hat der Anrufer seine Telefonnummer und bei
-einer Buchungsanfrage auch Zimmerart, Daten und Personenzahl bestätigt, bevor
-etwas gespeichert wurde?
+weitergegeben? Stammen freie Zimmer und Gesamtpreise für bestimmte Daten aus
+einem Werkzeugergebnis und hat Nina sie richtig wiedergegeben? Hat der Anrufer
+seine Telefonnummer und bei einer Buchungsanfrage auch Zimmerart, Daten und
+Personenzahl bestätigt, bevor etwas gespeichert wurde?
 
 Die Bewertung kommt mit dem Post-Call-Webhook und wird zu jedem Anruf
 gespeichert. Jeden Montagmorgen schickt ein n8n-Workflow dem Team einen
@@ -126,14 +127,15 @@ nicht bestanden haben. So ein Anruf wird im Protokoll nachgelesen, dann wird
 der Prompt oder die Wissensbasis korrigiert und aus dem Fall wird ein neuer
 Test.
 
-Die Kriterien sind bewusst positiv formuliert, weil der Bewerter in den Tests
-verneinte Kriterien falsch gelesen hat.
+Die Kriterien sind bewusst positiv formuliert, weil der Bewerter in den
+Agent-Tests verneinte Kriterien falsch gelesen hat.
 
 ## Wie Benjamin das Sprachmodell für Nina ausgewählt hat
 
 Das Sprachmodell hinter Nina hat Benjamin mit den sieben Gesprächstests
-ausgewählt. Jeden Test hat er fünfmal pro Modell laufen lassen und so drei
-Claude-Modelle verglichen.
+ausgewählt, also festen Tests in ElevenLabs zu Werkzeugaufrufen, einzelnen
+Antworten und ganzen Gesprächen. Jeden Test hat er fünfmal pro Modell laufen
+lassen und so drei Claude-Modelle verglichen.
 
 Sonnet 5.5 hat alle 35 Läufe bestanden, Haiku 5.5 kam auf 32 und Sonnet 5 auf
 28. Sonnet 5 war vor der Zimmerabfrage mit etwa 0,9 Sekunden am schnellsten,
@@ -149,7 +151,7 @@ Ein echter Anruf von 88 Sekunden hat etwa 13 US-Cent gekostet. Davon entfiel
 nur ein kleiner Teil auf das Sprachmodell, den größeren Teil machen Stimme und
 Telefonie aus. Bei wenigen Anrufen liegt der Unterschied zwischen den Modellen
 deshalb bei etwa einem Dollar im Monat. Für ein Hotel mit Hunderten Anrufen im
-Monat wäre Haiku der bessere Kompromiss.
+Monat wäre Haiku nach einer Anpassung des Prompts eine Überlegung wert.
 
 Drei der ersten Fehlschläge in den Tests gingen auf den Bewerter zurück, der
 einmal den Artikel "ein" als Zimmeranzahl gelesen hat. Seitdem liest Benjamin
