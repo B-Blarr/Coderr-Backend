@@ -10,9 +10,20 @@ Videoplattform, steht das Backend, das eigene Frontend ist noch im Aufbau und
 öffentlich ist es noch nicht. Cardelia, ein Kartenkatalog mit
 Sammlungsverwaltung, läuft bereits und ist unter cardelia.de/demo als Demo ohne
 Konto zu sehen, fertig ist es aber noch nicht. Nina, sein Telefon-Sprachagent
-für ein ausgedachtes Hotel, ist telefonisch erreichbar. Als Nächstes soll sie
-auch während des Aufenthalts helfen und Wünsche wie einen Weckruf, einen späten
-Check-out oder einen Tisch im Restaurant als Aufgabe an das Team weitergeben.
+für ein fiktives Hotel, ist telefonisch erreichbar. Gerade baut er für sie
+einen Teambereich, in dem das Hotelteam Buchungsanfragen, Rückrufbitten und
+Anrufe sieht.
+
+## Der Teambereich für Nina
+
+Damit das Hotelteam die Anfragen nicht nur per E-Mail bekommt, baut Benjamin
+einen Teambereich für Nina. Dahinter steht eine API mit dem Django REST
+Framework, bei der sich das Team über ein Sitzungscookie anmeldet. Die API
+greift mit einer eigenen Datenbankrolle auf PostgreSQL zu. Sie darf
+Buchungsanfragen, Rückrufbitten und Anrufe lesen, bei Anfragen und Rückrufen
+aber nur den Status ändern. Tests in GitHub Actions prüfen die Endpunkte auf
+einer frischen Datenbank gegen genau diese Rechte. Die Oberfläche baut Benjamin
+mit React und TypeScript. Fertig und öffentlich ist der Teambereich noch nicht.
 
 ## Videoflix, eine Streaming-Plattform mit Hintergrundverarbeitung
 
