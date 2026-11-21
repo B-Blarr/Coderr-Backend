@@ -53,6 +53,23 @@ Mehrere Quellen für dasselbe bedeuten dabei nicht mehr Sicherheit, sondern mehr
 Arbeit: Die Quellen widersprechen sich, benennen Dinge unterschiedlich und
 fallen unterschiedlich oft aus.
 
+Cardelia hat inzwischen über elf Millionen Preispunkte gespeichert. Mitte
+November 2026 kamen jeden Tag rund 98.000 dazu.
+
+## Das Erklärvideo zu Cardelia
+
+Zu Cardelia gibt es ein Erklärvideo von gut anderthalb Minuten. Es läuft im
+Portfolio auf der Projektkarte von Cardelia und auf der Architekturseite. Im
+ersten Teil zeigt es in 3D, was Cardelia für Sammler tut. Der zweite Teil
+zeigt, was nachts im Hintergrund passiert: den Weg eines einzelnen Preises von
+der Datenquelle über die Hintergrundjobs und die Datenbank bis in die Wertkurve
+einer Sammlung. Untertitel auf Deutsch und Englisch lassen sich einschalten.
+
+Entstanden ist das Video in Zusammenarbeit mit KI. Idee, Richtung und alle
+Entscheidungen bis hin zu den Tönen kamen von Benjamin, den Sprechertext hat er
+in mehreren Runden geformt. Die 3D-Szenen hat Claude per Skript in Blender
+gebaut, gesprochen ist der Text von einer KI-Stimme von ElevenLabs.
+
 ## Warum Cardelia als Projekt zählt
 
 Bei Cardelia hat Benjamin selbst entschieden, was er einsetzt und wie er es
