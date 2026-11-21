@@ -52,16 +52,18 @@ Felder erkennen.
 
 ## Wie Benjamin testet
 
-In Benjamins Django-Projekten prüfen die Tests die Schnittstelle so, wie ein
-Aufrufer sie benutzt: was ein angemeldeter Nutzer darf, was ein fremder Nutzer
-nicht darf und was bei falschen Eingaben passiert. Externe Dienste wie YouTube,
-Gemini oder das Sprachmodell werden in den Tests ersetzt, damit sie schnell
-laufen, nichts kosten und jedes Mal gleich ausgehen. Im Frontend testet er mit
-Vitest. Bei Nina prüfen außerdem SQL-Tests die Datenbank und Tests in
-ElevenLabs das Gesprächsverhalten.
+In Coderr, Quizly, Videoflix, bei diesem Assistenten und in der API von Ninas
+Teambereich prüfen die Tests die Schnittstelle so, wie ein Aufrufer sie
+benutzt: was ein angemeldeter Nutzer darf, was ein fremder Nutzer nicht darf
+und was bei falschen Eingaben passiert. Externe Dienste wie YouTube, Gemini
+oder das Sprachmodell werden in den Tests ersetzt, damit sie schnell laufen,
+nichts kosten und jedes Mal gleich ausgehen. Im Portfolio testet er mit Vitest.
+Bei Nina, seinem Telefon-Sprachagenten, prüfen außerdem SQL-Tests die Datenbank
+und Tests in ElevenLabs das Gesprächsverhalten.
 
 Wo eine Pipeline eingerichtet ist, laufen die Tests bei jeder Änderung
-automatisch in GitHub Actions. Ausgerollt wird nur, was sie besteht.
+automatisch in GitHub Actions. Bei den Projekten, die automatisch ausgerollt
+werden, geht nur live, was die Prüfungen besteht.
 
 Bei den KI-Projekten reicht das allein nicht, weil sich die Qualität einer
 Antwort nicht mit einem einfachen Vergleich prüfen lässt. Dort misst er mit
