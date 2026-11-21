@@ -11,9 +11,12 @@ aufgesetzt hat und administriert. Gelernt hat er Frontend- und
 Backend-Entwicklung in einer Vollzeitweiterbildung bei der Developer Akademie,
 und daneben baut er viel an eigenen Projekten.
 
-Seine Stärke liegt darin, Vorlagen exakt und detailliert umzusetzen. Die
-responsiven Layouts seiner Projekte sind dafür das sichtbarste Beispiel: sie
-sind nicht ungefähr nachgebaut, sondern bis in die kleinsten Abstände hinein.
+Bei seinen eigenen Projekten wie Cardelia, Nina und diesem Assistenten hat er
+Stack und Architektur selbst bestimmt und verantwortet sie von der Planung bis
+zum Betrieb. Arbeitet er nach einer Vorlage, liegt seine Stärke darin, sie
+exakt und detailliert umzusetzen. Die responsiven Layouts seiner Projekte sind
+dafür das sichtbarste Beispiel: sie sind nicht ungefähr nachgebaut, sondern bis
+in die kleinsten Abstände hinein.
 
 Dass er von der Oberfläche bis zum Server durchgeht, ist keine Aufzählung von
 Schlagworten, sondern nachprüfbar: dieselbe Anwendung, die er in Angular
@@ -48,9 +51,9 @@ Projekte dazugekommen, darunter Cardelia, der Voice-Agent Nina und dieser
 Assistent.
 
 Seine Projekte schreibt er nicht nur, er betreibt sie auch. Die meisten laufen
-auf seinem eigenen Server, bei jeder Änderung prüfen automatische Tests den
-Code, bevor er live geht, und um Sicherungen und die Absicherung des Servers
-kümmert er sich selbst.
+auf seinem eigenen Server, bei den Projekten mit Pipeline prüfen automatische
+Tests jede Änderung, bevor sie live geht, und um Sicherungen und die
+Absicherung des Servers kümmert er sich selbst.
 
 ## Welche Abschlüsse Benjamin hat
 
