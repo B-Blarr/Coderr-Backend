@@ -21,7 +21,8 @@ den wichtigsten Technologien:
 - **Quizly**: Python, Django REST Framework, Whisper, Gemini
 - **Videoflix**: Python, Django REST Framework, Redis, RQ, FFmpeg, Docker
 - **Nina, Telefon-Sprachagent für ein Hotel**: ElevenLabs Agents, Claude, n8n,
-  PostgreSQL, Docker
+  PostgreSQL, Docker, dazu ein Teambereich mit dem Django REST Framework (in
+  Arbeit)
 
 Dazu kommt der Assistent auf dieser Seite: Django, PostgreSQL mit pgvector und
 ein eigener Embedding-Dienst mit FastAPI.
@@ -34,7 +35,7 @@ Anwendungen mit KI dazugekommen.
 ## Welche Projekte Benjamin mit Django und Python gebaut hat
 
 Im Backend arbeitet Benjamin mit Python, Django und dem Django REST Framework.
-Damit sind sechs Projekte entstanden:
+Damit sind diese Projekte entstanden:
 
 - **Coderr** ist eine REST-API für eine Plattform, auf der Dienstleistungen
   angeboten, bestellt und bewertet werden. Sie läuft auf seinem eigenen Server.
@@ -45,10 +46,13 @@ Damit sind sechs Projekte entstanden:
   Whisper in Text umgewandelt, Gemini schreibt daraus zehn Fragen.
 - **Videoflix** ist eine Videoplattform, die hochgeladene Videos im Hintergrund
   in mehrere Auflösungen umwandelt. Das Projekt ist noch in Arbeit.
-- **Cardelia** ist ein Kartenkatalog mit Sammlungsverwaltung und sein größtes
-  Projekt. Stack und Architektur hat er dort selbst gewählt.
+- **Cardelia** ist ein Kartenkatalog mit Sammlungsverwaltung. Stack und
+  Architektur hat er dort selbst gewählt.
 - **Der Assistent auf dieser Seite** sucht Antworten in einer Wissensbasis mit
   PostgreSQL und pgvector.
+- **Der Teambereich für Nina** hat eine API mit dem Django REST Framework, über
+  die das Hotelteam Anfragen und Rückrufbitten sieht und ihren Status ändert.
+  Er ist noch in Arbeit.
 
 ## Welche Frontend-Projekte Benjamin gebaut hat
 

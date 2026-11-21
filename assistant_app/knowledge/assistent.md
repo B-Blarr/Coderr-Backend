@@ -25,19 +25,40 @@ Wissensbasis gesucht, und nur diese Abschnitte bekommt das Sprachmodell als
 Grundlage.
 
 Die Suche läuft auf Benjamins eigenem Server, mit PostgreSQL, pgvector und
-einem eigenen Embedding-Dienst. Findet sie nichts Passendes, sagt der
+einem eigenen Embedding-Dienst, der die Embeddings mit dem Modell
+multilingual-e5-base direkt auf dem Server berechnet. Für die Suche verlassen
+die Fragen den Server also nicht. Findet sie nichts Passendes, sagt der
 Assistent das, und das Sprachmodell wird gar nicht erst gefragt. Davor sitzt
 ein Filter, der Versuche erkennt, den Assistenten aus seiner Rolle zu holen
-oder ihm fremde Anweisungen unterzuschieben. Solche Anfragen werden
-abgewiesen, bevor sie das Sprachmodell erreichen. Die Antwort selbst schreibt
-das Sprachmodell Claude von Anthropic.
-
-Ob Suche, Filter und Antworten zuverlässig arbeiten, misst Benjamin mit festen
-Listen aus Testfragen, auch nach Änderungen an der Wissensbasis.
+oder ihm fremde Anweisungen unterzuschieben. Solche Anfragen werden abgewiesen,
+bevor sie das Sprachmodell erreichen. Die Antwort selbst schreibt Claude Haiku
+5.5 von Anthropic mit einer kurzen Denkphase. Benjamin hat es gegen Haiku 4.5
+getestet: Es beantwortete etwas mehr Testfragen richtig, kostete rund ein
+Siebtel und antwortete schneller.
 
 Benjamin hat den Assistenten gebaut, weil er RAG nicht nur in der Theorie
 verstehen wollte, sondern an einem System, das öffentlich läuft und von echten
 Besuchern benutzt wird.
+
+## Wie dieser Assistent getestet wird
+
+Der Assistent wird auf zwei Arten getestet. 78 Unit-Tests prüfen den Code: die
+Anbindung an Embedding-Dienst, Filter und Sprachmodell, das Einlesen der
+Wissensbasis und die Schnittstelle. Die externen Dienste werden dabei ersetzt.
+
+Ob die Antworten etwas taugen, lässt sich so aber nicht prüfen. Dafür gibt es
+drei feste Listen. 126 Fragen prüfen die Suche. Bei 103 davon steht fest,
+welche Abschnitte passen, und gezählt wird, wie oft einer davon unter den
+ersten drei Treffern ist. Die übrigen 23 haben mit Benjamin nichts zu tun. An
+ihnen sieht er, wie nah fremde Fragen an die Schwelle kommen, ab der das
+Sprachmodell gefragt wird. 15 Angriffe prüfen den Filter, der sie abweisen
+soll, während er die normalen Fragen durchlässt. 50 Fragen prüfen das ganze
+System bis zur Antwort: ob es antwortet, ablehnt oder einem Versuch widersteht,
+es aus seiner Rolle zu holen. Automatisch geprüft wird dabei, ob geantwortet
+wurde, den Ton der Antworten muss ein Mensch beurteilen. Mit einer früheren
+Fassung dieser Liste hat Benjamin auch das Sprachmodell ausgewählt.
+
+Nach Änderungen an der Wissensbasis laufen die Listen erneut.
 
 ## Ob eingegebene Texte gespeichert oder weitergegeben werden
 

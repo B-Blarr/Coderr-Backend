@@ -5,45 +5,57 @@ quelle: Aktuelle Arbeit
 
 ## Woran Benjamin gerade arbeitet
 
-Zurzeit arbeitet Benjamin an drei Projekten weiter. Bei Videoflix, einer
-Videoplattform, steht das Backend, das eigene Frontend ist noch im Aufbau und
-öffentlich ist es noch nicht. Cardelia, ein Kartenkatalog mit
-Sammlungsverwaltung, läuft bereits und ist unter cardelia.de/demo als Demo ohne
-Konto zu sehen, fertig ist es aber noch nicht. Nina, sein Telefon-Sprachagent
-für ein ausgedachtes Hotel, ist telefonisch erreichbar. Als Nächstes soll sie
-auch während des Aufenthalts helfen und Wünsche wie einen Weckruf, einen späten
-Check-out oder einen Tisch im Restaurant als Aufgabe an das Team weitergeben.
+Zurzeit arbeitet Benjamin vor allem an Nina, seinem Telefon-Sprachagenten für
+ein fiktives Hotel. Nina ist telefonisch erreichbar, gerade baut er für sie mit
+React einen Teambereich, in dem das Hotelteam Buchungsanfragen, Rückrufbitten
+und Anrufe sieht. Daneben entwickelt er Cardelia weiter, einen Kartenkatalog
+mit Sammlungsverwaltung. Cardelia läuft bereits und ist unter cardelia.de/demo
+als Demo ohne Konto zu sehen, fertig ist es aber noch nicht. Bei Videoflix,
+einer Videoplattform, steht das Backend. Ein eigenes Frontend mit Angular ist
+geplant, öffentlich ist das Projekt noch nicht.
+
+## Der Teambereich für Nina
+
+Damit das Hotelteam die Anfragen nicht nur per E-Mail bekommt, baut Benjamin
+einen Teambereich für Nina. Dahinter steht eine API mit dem Django REST
+Framework, bei der sich das Team über ein Sitzungscookie anmeldet. Die API
+greift mit einer eigenen Datenbankrolle auf PostgreSQL zu. Sie darf
+Buchungsanfragen, Rückrufbitten und Anrufe lesen, bei Anfragen und Rückrufen
+aber nur den Status ändern. Tests in GitHub Actions prüfen die Endpunkte auf
+einer frischen Datenbank gegen genau diese Rechte. Die Oberfläche baut Benjamin
+mit React und TypeScript. Fertig und öffentlich ist der Teambereich noch nicht.
 
 ## Videoflix, eine Streaming-Plattform mit Hintergrundverarbeitung
 
-Videoflix ist eine Videoplattform, an der Benjamin aktuell arbeitet. Das
-Backend steht, das eigene Frontend ist noch im Aufbau, und öffentlich
-erreichbar ist das Projekt bisher nicht.
+Videoflix ist eine Videoplattform, deren Backend steht. Ein eigenes Frontend
+mit Angular ist geplant, und öffentlich erreichbar ist das Projekt bisher
+nicht.
 
-Technisch ist es sein anspruchsvollstes Backend. Nach dem Hochladen eines
-Videos läuft die Konvertierung mit FFmpeg zu HLS in drei Auflösungen, 480p,
-720p und 1080p, dazu wird ein Vorschaubild herausgeschnitten. Das passiert
-nicht während der Anfrage, sondern als Hintergrundjob. Ein Video zu
-konvertieren dauert Minuten, und so lange darf niemand vor einer wartenden Seite
-sitzen.
+Technisch steckt in Videoflix viel Hintergrundverarbeitung. Nach dem Hochladen
+eines Videos läuft die Konvertierung mit FFmpeg zu HLS in drei Auflösungen,
+480p, 720p und 1080p, dazu wird ein Vorschaubild herausgeschnitten. Das
+passiert nicht während der Anfrage, sondern als Hintergrundjob. Ein Video zu
+konvertieren dauert Minuten, und so lange darf niemand vor einer wartenden
+Seite sitzen.
 
 Die Jobs laufen über zwei Warteschlangen mit unterschiedlicher Priorität: eine
 schnelle für E-Mails wie Kontoaktivierung und Passwort-Zurücksetzen, eine
 langsame für die Videokonvertierung. Der Grund ist einfach: Eine
 Aktivierungsmail, die hinter einer halbstündigen Videokonvertierung in der
-Schlange steht, kommt zu spät. Abgearbeitet wird von zwei Arbeitsprozessen in
-eigenen Docker-Containern, mit Redis als Unterbau.
+Schlange steht, kommt zu spät. Abgearbeitet werden sie von zwei
+Arbeitsprozessen im Backend-Container, die die schnelle Warteschlange immer
+zuerst bedienen, mit Redis als Unterbau.
 
 ## Warum Videoflix RQ verwendet und nicht Celery
 
 Benjamin hat in seinen Projekten beide Werkzeuge eingesetzt: Celery bei
-Cardelia, RQ bei Videoflix. Die Entscheidung fiel jeweils nach Projektgröße.
+Cardelia, RQ bei Videoflix.
 
-Für Videoflix reicht eine einfache Warteschlange auf Redis-Basis. Celery
-entfaltet seine Stärken erst mit einem zusätzlichen Vermittler wie RabbitMQ,
-und damit auch dessen Betriebsaufwand. RQ ist leichtgewichtiger, schneller
-aufgesetzt und bringt über django-rq eine Oberfläche mit, auf der sich Jobs,
-Fehler und vollständige Fehlerausgaben ansehen lassen.
+Für Videoflix reicht eine einfache Warteschlange auf Redis-Basis. Celery bringt
+mit Zeitplaner, automatischen Wiederholungen und verketteten Aufgaben mehr mit,
+als Videoflix braucht. RQ ist leichtgewichtiger, schneller aufgesetzt und
+bringt über django-rq eine Oberfläche mit, auf der sich Jobs, Fehler und
+vollständige Fehlerausgaben ansehen lassen.
 
 Bei zwei Warteschlangen und im Kern einem einzigen Job-Typ war das der
 passendere Zuschnitt. Die Frage ist für Benjamin nicht, welches Werkzeug

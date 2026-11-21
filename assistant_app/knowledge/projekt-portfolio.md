@@ -8,8 +8,8 @@ quelle: Projekt Portfolio
 Das Portfolio unter benjaminblarr.de ist Benjamins persönliche Website, eine
 Single-Page-Anwendung mit Angular und TypeScript. Sie stellt ihn vor, zeigt
 seine Technologien, eine Auswahl seiner Projekte mit Links zu den laufenden
-Anwendungen, Stimmen von Teampartnern, diesen Assistenten und ein
-Kontaktformular.
+Anwendungen, dazu ein Erklärvideo zu Cardelia, Stimmen von Teampartnern, diesen
+Assistenten und ein Kontaktformular.
 
 Die Seite ist zweisprachig, Deutsch und Englisch, und passt sich von großen
 4K-Bildschirmen bis hinunter zu 320 Pixel breiten Smartphones an.
@@ -21,18 +21,18 @@ Quelltext liegt öffentlich auf GitHub.
 
 ## Wie das Portfolio technisch aufgebaut ist
 
-Das Portfolio nutzt Angular 21 mit Standalone-Komponenten, also ohne
-NgModules, und SCSS ohne UI-Framework. Jeder Bereich der Seite ist eine eigene
-Komponente, wiederverwendbare Bausteine wie der Knopf, das Kontaktformular und
-das Projekt-Overlay liegen getrennt davon.
+Das Portfolio nutzt Angular mit Standalone-Komponenten, also ohne NgModules,
+und SCSS ohne UI-Framework. Jeder Bereich der Seite ist eine eigene Komponente,
+wiederverwendbare Bausteine wie der Knopf, das Kontaktformular und das
+Projekt-Overlay liegen getrennt davon.
 
 Die Texte der Seite stehen nicht in den Templates, sondern in je einer
 Sprachdatei für Deutsch und Englisch.
 
-Für den Knopf, das Kontaktformular, das Projekt-Overlay und den Assistenten
-gibt es Unit-Tests mit Vitest. Beim Formular und beim Assistenten wird dabei
-auch die Anfrage an den Server geprüft, ohne dass ein echter Server laufen
-muss.
+Für den Knopf, das Kontaktformular, das Projekt-Overlay, den Videoplayer und
+den Assistenten gibt es Unit-Tests mit Vitest. Beim Formular und beim
+Assistenten wird dabei auch die Anfrage an den Server geprüft, ohne dass ein
+echter Server laufen muss.
 
 ## Wie die Zweisprachigkeit des Portfolios funktioniert
 
@@ -70,8 +70,10 @@ Ausgerollt wird nur, was im Hauptzweig landet. Die Pipeline baut die Seite dann
 neu und überträgt sie per rsync auf den Server. Dabei werden alte Dateien im
 selben Durchgang entfernt und die Dateirechte direkt beim Schreiben gesetzt.
 
-Nach dem Deployment prüft die Pipeline, ob die Seite erreichbar ist und ob die
-Sprachdateien wirklich als JSON ankommen.
+Nach dem Deployment prüft die Pipeline, ob die Seite erreichbar ist, ob die
+Sprachdateien wirklich als JSON ankommen und ob das Video mit dem richtigen Typ
+ankommt und der Server Teilanfragen beantwortet, die ein Player zum Vorspulen
+braucht.
 
 ## Was Benjamin am Kontaktformular des Portfolios gelernt hat
 

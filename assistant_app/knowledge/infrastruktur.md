@@ -52,10 +52,11 @@ die noch nie zurückgespielt wurde, ist keine Sicherung, sondern eine Annahme.
 
 ## Wie neue Versionen live gehen
 
-Benjamin deployt nicht von Hand, sondern über eine CI/CD-Pipeline in GitHub
-Actions. Bei jeder Änderung laufen zuerst die Prüfungen: Codeformatierung,
-statische Analyse, automatische Tests, ein vollständiger Build. Erst wenn alles
-davon durchläuft und die Änderung im Hauptzweig landet, wird ausgerollt.
+Seine Anwendungen auf dem Server, etwa das Portfolio und Coderr, deployt
+Benjamin nicht von Hand, sondern über eine CI/CD-Pipeline in GitHub Actions.
+Bei jeder Änderung laufen zuerst die Prüfungen, je nach Projekt Linting,
+Formatprüfung, automatische Tests und ein Build. Erst wenn alles davon
+durchläuft und die Änderung im Hauptzweig landet, wird ausgerollt.
 
 Ein Pull Request durchläuft dieselben Prüfungen, rollt aber nie aus. Dadurch ist
 der Moment, in dem etwas live geht, eine bewusste Entscheidung und kein
